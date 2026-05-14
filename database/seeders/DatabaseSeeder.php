@@ -16,14 +16,23 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $adminEmail = env('ADMIN_EMAIL');
+        $adminPassword = env('ADMIN_PASSWORD');
+
+        if (! $adminEmail || ! $adminPassword) {
+            $this->command?->warn('ADMIN_EMAIL and ADMIN_PASSWORD are missing. Admin user was not seeded.');
+
+            return;
+        }
+
         User::updateOrCreate([
-            'email' => env('ADMIN_EMAIL', 'admin@elliryc.local'),
+            'email' => $adminEmail,
         ], [
-            'name' => env('ADMIN_NAME', 'Administrateur TutorLink'),
+            'name' => env('ADMIN_NAME', 'Administrateur'),
             'role' => 'admin',
             'status' => 'actif',
             'email_verified_at' => now(),
-            'password' => Hash::make(env('ADMIN_PASSWORD', 'password')),
+            'password' => Hash::make($adminPassword),
         ]);
     }
 }

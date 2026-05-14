@@ -1,14 +1,14 @@
-# Déploiement Railway - TutorLinks
+# DÃ©ploiement Railway - TutorLinks
 
-## 1. Créer le projet Railway
+## 1. CrÃ©er le projet Railway
 
 1. Va sur https://railway.app
 2. Connecte ton compte GitHub
 3. Clique sur **New Project**
 4. Choisis **Deploy from GitHub repo**
-5. Sélectionne le dépôt du projet
+5. SÃ©lectionne le dÃ©pÃ´t du projet
 
-Si le projet n'est pas encore sur GitHub, crée d'abord un dépôt GitHub puis pousse le dossier `ELLIRYC_PLATEFORME`.
+Si le projet n'est pas encore sur GitHub, crÃ©e d'abord un dÃ©pÃ´t GitHub puis pousse le dossier `ELLIRYC_PLATEFORME`.
 
 ## 2. Ajouter MySQL
 
@@ -21,7 +21,7 @@ Dans Railway :
 5. Va dans **Variables**
 6. Ajoute les variables Laravel de connexion MySQL avec les valeurs fournies par Railway
 
-Variables à créer :
+Variables Ã  crÃ©er :
 
 ```env
 DB_CONNECTION=mysql
@@ -32,7 +32,7 @@ DB_USERNAME=${{MySQL.MYSQLUSER}}
 DB_PASSWORD=${{MySQL.MYSQLPASSWORD}}
 ```
 
-Si Railway affiche des noms différents, utilise les noms exacts affichés dans l'onglet Variables du service MySQL.
+Si Railway affiche des noms diffÃ©rents, utilise les noms exacts affichÃ©s dans l'onglet Variables du service MySQL.
 
 ## 3. Variables obligatoires de l'application
 
@@ -77,30 +77,30 @@ KKIAPAY_PRIVATE_KEY=REMPLACER
 KKIAPAY_SECRET=REMPLACER
 KKIAPAY_SANDBOX=false
 
-ADMIN_NAME=Administrateur TutorLinks
+ADMIN_NAME=REMPLACER
 ADMIN_EMAIL=REMPLACER
 ADMIN_PASSWORD=REMPLACER_PAR_UN_MOT_DE_PASSE_SOLIDE
 ```
 
-Pour générer `APP_KEY` en local :
+Pour gÃ©nÃ©rer `APP_KEY` en local :
 
 ```bash
 php artisan key:generate --show
 ```
 
-Copie la valeur complète qui commence par `base64:`.
+Copie la valeur complÃ¨te qui commence par `base64:`.
 
-## 4. Déploiement
+## 4. DÃ©ploiement
 
-Après avoir mis les variables :
+AprÃ¨s avoir mis les variables :
 
 1. Railway va lancer le build automatiquement
-2. La commande de démarrage exécutera les migrations et créera l'administrateur
+2. La commande de dÃ©marrage exÃ©cutera les migrations et crÃ©era l'administrateur
 3. Ouvre l'URL Railway du service Laravel
 
 ## Notes importantes
 
-- WebRTC demande HTTPS : Railway fournit HTTPS, donc le micro et la caméra peuvent fonctionner.
-- Pusher sert uniquement à la signalisation et aux notifications.
-- Sur l'offre gratuite, les fichiers stockés localement peuvent être perdus après redémarrage/redeploy. Pour une démo, c'est acceptable. Pour une vraie mise en production, il faudra un stockage externe compatible S3.
-- Pour les appels WebRTC fiables sur tous les réseaux, il faudra ajouter un serveur TURN plus tard.
+- WebRTC demande HTTPS : Railway fournit HTTPS, donc le micro et la camÃ©ra peuvent fonctionner.
+- Pusher sert uniquement Ã  la signalisation et aux notifications.
+- Sur l'offre gratuite, les fichiers stockÃ©s localement peuvent Ãªtre perdus aprÃ¨s redÃ©marrage/redeploy. Pour une dÃ©mo, c'est acceptable. Pour une vraie mise en production, il faudra un stockage externe compatible S3.
+- Pour les appels WebRTC fiables sur tous les rÃ©seaux, il faudra ajouter un serveur TURN plus tard.
