@@ -1,0 +1,39 @@
+﻿@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Sans+3:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        @apply bg-tutor-surface font-sans text-tutor-ink antialiased;
+    }
+
+    h1,
+    h2,
+    h3 {
+        @apply font-display tracking-normal text-tutor-navy;
+    }
+}
+
+@layer components {
+    .tl-card {
+        @apply rounded-lg border border-slate-200 bg-white shadow-tutor;
+    }
+
+    .tl-button-primary {
+        @apply inline-flex items-center justify-center gap-2 rounded-lg bg-tutor-gold px-5 py-3 text-sm font-bold text-tutor-navy transition hover:-translate-y-0.5 hover:shadow-tutor-strong disabled:cursor-not-allowed disabled:opacity-50;
+    }
+
+    .tl-button-secondary {
+        @apply inline-flex items-center justify-center gap-2 rounded-lg border border-tutor-navy px-5 py-3 text-sm font-bold text-tutor-navy transition hover:-translate-y-0.5 hover:bg-tutor-navy hover:text-white disabled:cursor-not-allowed disabled:opacity-50;
+    }
+
+    .tl-input {
+        @apply rounded-lg border-slate-300 bg-white text-sm text-tutor-ink shadow-sm placeholder:text-slate-400 focus:border-tutor-navy focus:ring-tutor-navy;
+    }
+}

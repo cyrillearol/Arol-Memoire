@@ -1,0 +1,109 @@
+<?php
+
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Support\PlatformNotifier;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules;
+use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class RegisteredUserController extends Controller
+{
+    /**
+     * Display the registration view.
+     */
+    public function create(): Response
+    {
+        return Inertia::render('Auth/Register');
+    }
+
+    /**
+     * Handle an incoming registration request.
+     *
+     * @throws ValidationException
+     */
+    public function store(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
+            'role' => 'required|string|in:etudiant,tuteur',
+            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'domain' => 'required_if:role,tuteur|nullable|string|max:255',
+            'subjects' => 'required_if:role,tuteur|nullable|string|max:1000',
+            'hourly_rate' => 'required_if:role,tuteur|nullable|numeric|min:0|max:999999.99',
+            'bio' => 'required_if:role,tuteur|nullable|string|min:30|max:2000',
+            'documents' => 'required_if:role,tuteur|nullable|array|min:1|max:5',
+            'documents.*' => 'file|mimes:pdf,jpg,jpeg,png,doc,docx|max:5120',
+        ]);
+
+        $user = DB::transaction(function () use ($request) {
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'role' => $request->role,
+                'status' => $request->role === 'tuteur' ? 'en_attente' : 'actif',
+                'password' => Hash::make($request->password),
+            ]);
+
+            if ($request->role === 'tuteur') {
+                $subjects = collect(explode(',', (string) $request->subjects))
+                    ->map(fn (string $subject) => trim($subject))
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                if ($subjects === []) {
+                    throw ValidationException::withMessages([
+                        'subjects' => 'Indiquez au moins une matiere enseignee.',
+                    ]);
+                }
+
+                $profile = $user->tutorProfile()->create([
+                    'domain' => $request->domain,
+                    'subjects' => $subjects,
+                    'hourly_rate' => $request->hourly_rate,
+                    'bio' => $request->bio,
+                ]);
+
+                foreach ($request->file('documents', []) as $document) {
+                    $path = $document->store('tutor-documents', 'public');
+
+                    $profile->documents()->create([
+                        'original_name' => $document->getClientOriginalName(),
+                        'path' => $path,
+                        'mime_type' => $document->getClientMimeType(),
+                        'size' => $document->getSize(),
+                    ]);
+                }
+            }
+
+            return $user;
+        });
+
+        if ($user->role === 'tuteur') {
+            PlatformNotifier::sendToAdmins(
+                'Nouvelle candidature tuteur',
+                $user->name.' a soumis une candidature tuteur à valider.',
+                route('dashboard'),
+                'warning'
+            );
+        }
+
+        event(new Registered($user));
+
+        Auth::login($user);
+
+        return redirect(route('dashboard', absolute: false));
+    }
+}
