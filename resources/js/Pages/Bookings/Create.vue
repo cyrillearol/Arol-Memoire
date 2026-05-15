@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import PublicFooter from '@/Components/PublicFooter.vue';
 import PublicHeader from '@/Components/PublicHeader.vue';
 import { Head, useForm } from '@inertiajs/vue3';
@@ -38,6 +38,7 @@ const form = useForm({
 const amount = computed(() => Math.round((props.tutor.hourly_rate || 0) * (Number(form.duration_minutes) / 60)));
 const fees = computed(() => Math.round(amount.value * 0.1));
 const total = computed(() => amount.value + fees.value);
+const isKkiapaySandbox = computed(() => [true, 1, '1', 'true'].includes(props.payment.sandbox));
 const money = (value) => `${new Intl.NumberFormat('fr-FR').format(value || 0)} FCFA`;
 const filteredSlots = computed(() => slots.value.filter((slot) => slot.available_durations?.includes(Number(form.duration_minutes))));
 const selectedSlot = computed(() => slots.value.find((slot) => slot.scheduled_at === form.scheduled_at));
@@ -141,7 +142,10 @@ const startKkiapayPayment = async () => {
     window.openKkiapayWidget({
         amount: total.value,
         key: props.payment.public_key,
-        sandbox: Boolean(props.payment.sandbox),
+        apikey: props.payment.public_key,
+        api_key: props.payment.public_key,
+        publicAPIKey: props.payment.public_key,
+        sandbox: isKkiapaySandbox.value,
         position: 'center',
         theme: '#022448',
         paymentMethods: ['momo', 'card'],

@@ -34,11 +34,14 @@ class AuthenticationTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $this->post('/login', [
+        $response = $this->post('/login', [
             'email' => $user->email,
             'password' => 'wrong-password',
         ]);
 
+        $response->assertSessionHasErrors([
+            'email' => 'Adresse e-mail ou mot de passe incorrect.',
+        ]);
         $this->assertGuest();
     }
 

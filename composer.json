@@ -1,10 +1,10 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "elliryc/tutoring-platform",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Plateforme web de tutorat en ligne ELLIRYC.",
     "keywords": ["laravel", "framework"],
-    "license": "MIT",
+    "license": "proprietary",
     "require": {
         "php": "^8.2",
         "inertiajs/inertia-laravel": "^2.0",

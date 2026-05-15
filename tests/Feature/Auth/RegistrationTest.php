@@ -28,13 +28,14 @@ class RegistrationTest extends TestCase
             'password_confirmation' => 'password',
         ]);
 
-        $this->assertAuthenticated();
+        $this->assertGuest();
         $this->assertDatabaseHas('users', [
             'email' => 'test@example.com',
             'role' => 'etudiant',
             'status' => 'actif',
         ]);
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(route('login', absolute: false));
+        $response->assertSessionHas('status', 'Votre compte a été créé. Connectez-vous pour continuer.');
     }
 
     public function test_tutors_can_register_with_profile_and_documents(): void
@@ -54,7 +55,7 @@ class RegistrationTest extends TestCase
             'password_confirmation' => 'password',
         ]);
 
-        $this->assertAuthenticated();
+        $this->assertGuest();
         $this->assertDatabaseHas('users', [
             'email' => 'tutor@example.com',
             'role' => 'tuteur',
@@ -68,6 +69,7 @@ class RegistrationTest extends TestCase
             'original_name' => 'diplome.pdf',
         ]);
 
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(route('login', absolute: false));
+        $response->assertSessionHas('status', 'Votre candidature a été envoyée. Connectez-vous pour suivre sa validation.');
     }
 }

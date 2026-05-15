@@ -108,12 +108,12 @@ class PlatformWorkflowTest extends TestCase
 
         $this->actingAs($student)
             ->post(route('bookings.store', $tutor), [
-                'subject' => 'AlgÃ¨bre',
+                'subject' => 'Algèbre',
                 'scheduled_at' => $scheduledAt->format('Y-m-d H:i:s'),
                 'duration_minutes' => 60,
                 'payment_method' => 'kkiapay',
                 'kkiapay_transaction_id' => 'test_kkiapay_success_001',
-                'notes' => 'PrÃ©parer les exercices du chapitre 3.',
+                'notes' => 'Préparer les exercices du chapitre 3.',
             ])
             ->assertRedirect(route('dashboard'));
 
@@ -172,7 +172,7 @@ class PlatformWorkflowTest extends TestCase
         $this->actingAs($student)
             ->from(route('bookings.create', $tutor))
             ->post(route('bookings.store', $tutor), [
-                'subject' => 'AlgÃƒÂ¨bre',
+                'subject' => 'Algèbre',
                 'scheduled_at' => $scheduledAt->format('Y-m-d H:i:s'),
                 'duration_minutes' => 60,
                 'payment_method' => 'kkiapay',
@@ -215,6 +215,11 @@ class PlatformWorkflowTest extends TestCase
                 ],
             ])
             ->assertNoContent();
+
+        $this->assertDatabaseHas('notifications', [
+            'notifiable_id' => $tutor->id,
+            'read_at' => null,
+        ]);
     }
 
     public function test_call_signals_require_a_participant_and_an_accepted_booking(): void
@@ -278,10 +283,10 @@ class PlatformWorkflowTest extends TestCase
         ]);
 
         $tutor->tutorProfile()->create([
-            'domain' => 'MathÃ©matiques',
-            'subjects' => ['AlgÃ¨bre', 'Statistiques'],
+            'domain' => 'Mathématiques',
+            'subjects' => ['Algèbre', 'Statistiques'],
             'hourly_rate' => 5000,
-            'bio' => 'Accompagnement structurÃ© pour aider les Ã©tudiants Ã  progresser durablement.',
+            'bio' => 'Accompagnement structuré pour aider les étudiants à progresser durablement.',
         ]);
 
         return $tutor;

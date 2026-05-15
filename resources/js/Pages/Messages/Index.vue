@@ -110,15 +110,20 @@ const cleanupCall = () => {
     void attachStreams();
 };
 
-const endCall = async (conversationId = callConversationId.value || props.selectedConversation?.id, notify = true) => {
-    const shouldNotify = notify && conversationId && callState.value !== 'idle';
+const sendCallSignalInBackground = (type, payload = {}, mode = callMode.value, conversationId = callConversationId.value || props.selectedConversation?.id) => {
+    void sendCallSignal(type, payload, mode, conversationId).catch((error) => {
+        console.warn('Signal d’appel non envoyé', error);
+    });
+};
 
-    try {
-        if (shouldNotify) {
-            await sendCallSignal('call-end', {}, callMode.value, conversationId);
-        }
-    } finally {
-        cleanupCall();
+const endCall = (conversationId = callConversationId.value || props.selectedConversation?.id, notify = true) => {
+    const shouldNotify = notify && conversationId && callState.value !== 'idle';
+    const mode = callMode.value;
+
+    cleanupCall();
+
+    if (shouldNotify) {
+        sendCallSignalInBackground('call-end', {}, mode, conversationId);
     }
 };
 
@@ -281,20 +286,21 @@ const acceptCall = async () => {
         callState.value = 'active';
         callStatus.value = 'Appel en cours';
     } catch (error) {
-        await endCall(undefined, true);
+        endCall(undefined, true);
         setCallError(error.message === 'WEBRTC_UNAVAILABLE'
             ? 'Le navigateur bloque le micro ou la caméra. Utilisez localhost, 127.0.0.1 ou HTTPS.'
             : 'Impossible d’accepter l’appel. Vérifiez l’autorisation du micro ou de la caméra.');
     }
 };
 
-const declineCall = async () => {
+const declineCall = () => {
     const conversationId = callConversationId.value || props.selectedConversation?.id;
+    const mode = callMode.value;
 
-    try {
-        await sendCallSignal('call-decline', { reason: 'declined' }, callMode.value, conversationId);
-    } finally {
-        cleanupCall();
+    cleanupCall();
+
+    if (conversationId) {
+        sendCallSignalInBackground('call-decline', { reason: 'declined' }, mode, conversationId);
     }
 };
 
