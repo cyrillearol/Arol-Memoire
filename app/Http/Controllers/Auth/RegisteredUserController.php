@@ -34,13 +34,14 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults(), 'max:15'],
             'domain' => 'required_if:role,tuteur|nullable|string|max:255',
             'subjects' => 'required_if:role,tuteur|nullable|string|max:1000',
-            'hourly_rate' => 'required_if:role,tuteur|nullable|numeric|min:0|max:999999.99',
+            'hourly_rate' => 'required_if:role,tuteur|nullable|numeric|min:100|max:999999.99',
             'bio' => 'required_if:role,tuteur|nullable|string|min:30|max:2000',
             'documents' => 'required_if:role,tuteur|nullable|array|min:1|max:5',
             'documents.*' => 'file|mimes:pdf,jpg,jpeg,png,doc,docx|max:5120',
         ], [
             'bio.min' => 'La présentation professionnelle doit contenir au moins 30 caractères.',
             'documents.required_if' => 'Ajoutez au moins un document justificatif pour la candidature tuteur.',
+            'hourly_rate.min' => 'Le tarif horaire doit être supérieur à 0 FCFA.',
         ]);
 
         $user = DB::transaction(function () use ($request) {

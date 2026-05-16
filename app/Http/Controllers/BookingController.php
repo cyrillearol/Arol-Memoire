@@ -84,6 +84,10 @@ class BookingController extends Controller
         $serviceFee = round($amount * 0.1, 2);
         $totalAmount = round($amount + $serviceFee, 2);
 
+        if ($totalAmount <= 0) {
+            return back()->withErrors(['payment' => 'Le tarif de ce tuteur est invalide. Le paiement ne peut pas être lancé avec un total à 0 FCFA.'])->withInput();
+        }
+
         if (Payment::query()->where('transaction_reference', $validated['kkiapay_transaction_id'])->where('status', 'valide')->exists()) {
             return back()->withErrors(['payment' => 'Cette transaction Kkiapay a déjà été utilisée.'])->withInput();
         }

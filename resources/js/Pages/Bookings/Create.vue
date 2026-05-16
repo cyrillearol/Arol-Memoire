@@ -45,6 +45,7 @@ const form = useForm({
 const amount = computed(() => Math.round((props.tutor.hourly_rate || 0) * (Number(form.duration_minutes) / 60)));
 const fees = computed(() => Math.round(amount.value * 0.1));
 const total = computed(() => amount.value + fees.value);
+const hasValidPaymentAmount = computed(() => total.value > 0);
 const isKkiapaySandbox = computed(() => [true, 1, '1', 'true'].includes(props.payment.sandbox));
 const money = (value) => `${new Intl.NumberFormat('fr-FR').format(value || 0)} FCFA`;
 const filteredSlots = computed(() => slots.value.filter((slot) => slot.available_durations?.includes(Number(form.duration_minutes))));
@@ -257,6 +258,11 @@ const startKkiapayPayment = async () => {
         return;
     }
 
+    if (!hasValidPaymentAmount.value) {
+        paymentError.value = 'Le tarif de ce tuteur est invalide. Le paiement ne peut pas être lancé avec un total à 0 FCFA.';
+        return;
+    }
+
     try {
         paymentStatus.value = 'Chargement du paiement...';
         await loadKkiapayScript();
@@ -414,10 +420,11 @@ onMounted(async () => {
                                 <div class="flex justify-between"><span>Frais de service</span><span class="font-bold">{{ money(fees) }}</span></div>
                                 <div class="flex justify-between border-t border-slate-200 pt-3 text-lg font-bold text-tutor-navy"><span>Total</span><span>{{ money(total) }}</span></div>
                             </div>
-                            <button type="button" class="tl-button-primary mt-6 w-full" :disabled="form.processing || !form.scheduled_at || Boolean(paymentStatus)" @click="startKkiapayPayment">
+                            <button type="button" class="tl-button-primary mt-6 w-full" :disabled="form.processing || !form.scheduled_at || !hasValidPaymentAmount || Boolean(paymentStatus)" @click="startKkiapayPayment">
                                 {{ buttonLabel }}
                             </button>
-                            <p class="mt-4 text-center text-xs leading-5 text-slate-500">Transaction enregistrée et associée à votre réservation.</p>
+                            <p v-if="!hasValidPaymentAmount" class="mt-4 text-center text-xs font-semibold leading-5 text-red-600">Le tuteur doit définir un tarif supérieur à 0 FCFA.</p>
+                            <p v-else class="mt-4 text-center text-xs leading-5 text-slate-500">Transaction enregistrée et associée à votre réservation.</p>
                         </div>
                     </section>
                 </div>

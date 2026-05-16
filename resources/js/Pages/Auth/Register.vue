@@ -101,7 +101,7 @@ const submit = () => {
 
                 <div class="mt-5">
                     <InputLabel for="hourly_rate" value="Tarif horaire en FCFA" />
-                    <TextInput id="hourly_rate" v-model="form.hourly_rate" type="number" min="0" step="0.01" class="mt-2" :required="form.role === 'tuteur'" placeholder="5000" />
+                    <TextInput id="hourly_rate" v-model="form.hourly_rate" type="number" min="100" step="100" class="mt-2" :required="form.role === 'tuteur'" placeholder="5000" />
                     <InputError class="mt-2" :message="form.errors.hourly_rate" />
                 </div>
 
