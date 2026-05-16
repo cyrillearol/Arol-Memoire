@@ -17,6 +17,7 @@ class NotificationController extends Controller
         $notifications = DB::table('notifications')
             ->where('notifiable_type', User::class)
             ->where('notifiable_id', $request->user()->id)
+            ->where('data', 'not like', '%"call"%')
             ->latest('created_at')
             ->paginate(15)
             ->through(function ($notification) {
@@ -28,7 +29,6 @@ class NotificationController extends Controller
                     'body' => $data['body'] ?? '',
                     'url' => $data['url'] ?? null,
                     'tone' => $data['tone'] ?? 'info',
-                    'call' => $data['call'] ?? null,
                     'read_at' => $notification->read_at,
                     'created_at' => $notification->created_at,
                 ];

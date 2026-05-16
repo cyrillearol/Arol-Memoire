@@ -168,6 +168,26 @@ const setCallError = (message) => {
     }, 7000);
 };
 
+const mediaErrorMessage = (error) => {
+    if (error?.message === 'WEBRTC_UNAVAILABLE') {
+        return 'Les appels exigent HTTPS et un navigateur compatible WebRTC.';
+    }
+
+    if (['NotAllowedError', 'PermissionDeniedError'].includes(error?.name)) {
+        return 'Le navigateur refuse le micro ou la camera. Ouvrez le cadenas du site, autorisez micro/camera, puis rechargez la page.';
+    }
+
+    if (['NotFoundError', 'DevicesNotFoundError'].includes(error?.name)) {
+        return 'Aucun micro ou camera utilisable n a ete trouve sur cet appareil.';
+    }
+
+    if (['NotReadableError', 'TrackStartError'].includes(error?.name)) {
+        return 'Le micro ou la camera est deja utilise par une autre application. Fermez l autre application puis reessayez.';
+    }
+
+    return `Impossible d allumer le micro ou la camera${error?.name ? ` (${error.name})` : ''}.`;
+};
+
 const attachStreams = async () => {
     await nextTick();
 
@@ -241,19 +261,35 @@ const requestLocalStream = async (mode) => {
         throw new Error('WEBRTC_UNAVAILABLE');
     }
 
-    localStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-        },
-        video: mode === 'video'
-            ? {
-                width: { ideal: 1280 },
-                height: { ideal: 720 },
-                facingMode: 'user',
-            }
-            : false,
-    });
+    const audio = {
+        echoCancellation: true,
+        noiseSuppression: true,
+    };
+
+    const video = {
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        facingMode: 'user',
+    };
+
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({
+            audio,
+            video: mode === 'video' ? video : false,
+        });
+    } catch (error) {
+        if (mode !== 'video') {
+            throw error;
+        }
+
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({ audio, video: false });
+            callMode.value = 'audio';
+            callStatus.value = 'Camera indisponible, appel audio lance.';
+        } catch (audioError) {
+            throw audioError;
+        }
+    }
 
     await attachStreams();
 
@@ -358,20 +394,21 @@ const startCall = async (mode) => {
         const connection = createPeerConnection();
         addLocalTracks(connection);
 
+        const effectiveMode = callMode.value;
         const offer = await connection.createOffer({
             offerToReceiveAudio: true,
-            offerToReceiveVideo: mode === 'video',
+            offerToReceiveVideo: effectiveMode === 'video',
         });
 
         await connection.setLocalDescription(offer);
         await sendCallSignal('call-offer', {
             description: connection.localDescription,
-        }, mode);
+        }, effectiveMode);
     } catch (error) {
         cleanupCall();
         setCallError(!mediaReady || error.message === 'WEBRTC_UNAVAILABLE'
-            ? 'Le navigateur bloque le micro ou la caméra. Utilisez HTTPS et vérifiez les autorisations du site.'
-            : 'L’appel n’a pas pu être transmis. Vérifiez Pusher ou votre connexion.');
+            ? mediaErrorMessage(error)
+            : 'L appel n a pas pu etre transmis. Verifiez Pusher ou votre connexion.');
     }
 };
 
@@ -400,9 +437,7 @@ const acceptCall = async () => {
         callStatus.value = 'Appel en cours';
     } catch (error) {
         endCall(undefined, true);
-        setCallError(error.message === 'WEBRTC_UNAVAILABLE'
-            ? 'Le navigateur bloque le micro ou la caméra. Utilisez HTTPS et vérifiez les autorisations du site.'
-            : 'Impossible d’accepter l’appel. Vérifiez l’autorisation du micro ou de la caméra.');
+        setCallError(mediaErrorMessage(error));
     }
 };
 

@@ -1,6 +1,6 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { Link, router, useForm, usePage } from '@inertiajs/vue3';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { Link, useForm, usePage } from '@inertiajs/vue3';
 import {
     AlertCircle,
     Bell,
@@ -32,9 +32,25 @@ const liveNotice = ref(null);
 const incomingCall = ref(null);
 const incomingCallDeclining = ref(false);
 const incomingCallJoining = ref(false);
+const globalCallState = ref('idle');
+const globalCallStatus = ref('');
+const globalCallError = ref('');
+const globalLocalVideo = ref(null);
+const globalRemoteVideo = ref(null);
+const globalRemoteAudio = ref(null);
+let globalPeerConnection = null;
+let globalLocalStream = null;
+let globalRemoteStream = null;
+let globalPendingCandidates = [];
 const unreadNotificationsCount = computed(() => liveUnreadCount.value);
-const incomingCallTitle = computed(() => incomingCall.value?.mode === 'video' ? 'Appel video entrant' : 'Appel audio entrant');
 const incomingCallIcon = computed(() => incomingCall.value?.mode === 'video' ? Video : PhoneIncoming);
+const globalCallTitle = computed(() => {
+    if (!incomingCall.value) return '';
+    if (globalCallState.value === 'incoming') return `${incomingCall.value.sender_name || 'Un utilisateur'} vous appelle`;
+    if (globalCallState.value === 'connecting') return 'Connexion de l appel...';
+
+    return `En appel avec ${incomingCall.value.sender_name || 'votre correspondant'}`;
+});
 
 const reportForm = useForm({
     subject: '',
@@ -61,47 +77,216 @@ const showLiveNotice = (notification) => {
     }, 8000);
 };
 
-const incomingCallFromNotification = (notification) => {
-    const call = notification?.call;
+const attachGlobalStreams = async () => {
+    await nextTick();
 
-    if (!call || call.type !== 'call-offer') {
-        return null;
+    if (globalLocalVideo.value) {
+        globalLocalVideo.value.srcObject = globalLocalStream;
     }
 
-    return {
-        ...call,
-        url: call.url || notification.url,
-        payload: {
-            ...(call.payload || {}),
-            candidates: call.payload?.candidates || [],
-        },
-    };
+    if (globalRemoteVideo.value) {
+        globalRemoteVideo.value.srcObject = globalRemoteStream;
+    }
+
+    if (globalRemoteAudio.value) {
+        globalRemoteAudio.value.srcObject = globalRemoteStream;
+    }
 };
 
-const sameIncomingCall = (event) => incomingCall.value
-    && Number(incomingCall.value.conversation_id) === Number(event?.conversation_id);
+const mediaErrorMessage = (error) => {
+    if (error?.message === 'WEBRTC_UNAVAILABLE') {
+        return 'Les appels exigent HTTPS et un navigateur compatible WebRTC.';
+    }
 
-const persistIncomingCall = (call, autoAccept = false) => {
-    if (!call) return;
+    if (['NotAllowedError', 'PermissionDeniedError'].includes(error?.name)) {
+        return 'Le navigateur refuse le micro ou la camera. Ouvrez le cadenas du site, autorisez micro/camera, puis rechargez la page.';
+    }
+
+    if (['NotFoundError', 'DevicesNotFoundError'].includes(error?.name)) {
+        return 'Aucun micro ou camera utilisable n a ete trouve sur cet appareil.';
+    }
+
+    if (['NotReadableError', 'TrackStartError'].includes(error?.name)) {
+        return 'Le micro ou la camera est deja utilise par une autre application. Fermez l autre application puis reessayez.';
+    }
+
+    return `Impossible d allumer le micro ou la camera${error?.name ? ` (${error.name})` : ''}.`;
+};
+
+const requestGlobalLocalStream = async (mode) => {
+    if (!navigator.mediaDevices?.getUserMedia || !window.RTCPeerConnection || !window.isSecureContext) {
+        throw new Error('WEBRTC_UNAVAILABLE');
+    }
+
+    const audio = {
+        echoCancellation: true,
+        noiseSuppression: true,
+    };
 
     try {
-        window.sessionStorage?.setItem('tutorlink:incoming-call', JSON.stringify({
-            ...call,
-            auto_accept: autoAccept,
-            stored_at: Date.now(),
-        }));
+        globalLocalStream = await navigator.mediaDevices.getUserMedia({
+            audio,
+            video: mode === 'video' ? { facingMode: 'user' } : false,
+        });
     } catch (error) {
-        console.warn('Appel entrant non sauvegarde', error);
+        if (mode !== 'video') {
+            throw error;
+        }
+
+        try {
+            globalLocalStream = await navigator.mediaDevices.getUserMedia({ audio, video: false });
+            incomingCall.value = { ...incomingCall.value, mode: 'audio' };
+            globalCallStatus.value = 'Camera indisponible, appel audio lance.';
+        } catch (audioError) {
+            throw audioError;
+        }
+    }
+
+    await attachGlobalStreams();
+
+    return globalLocalStream;
+};
+
+const sendGlobalCallSignal = async (type, payload = {}) => {
+    if (!incomingCall.value?.conversation_id) return;
+
+    await window.axios.post(route('calls.signal', incomingCall.value.conversation_id), {
+        type,
+        mode: incomingCall.value.mode || 'audio',
+        payload,
+    }, { timeout: 10000 });
+};
+
+const cleanupGlobalCall = () => {
+    if (globalPeerConnection) {
+        globalPeerConnection.onicecandidate = null;
+        globalPeerConnection.ontrack = null;
+        globalPeerConnection.onconnectionstatechange = null;
+        globalPeerConnection.close();
+    }
+
+    if (globalLocalStream) {
+        globalLocalStream.getTracks().forEach((track) => track.stop());
+    }
+
+    globalPeerConnection = null;
+    globalLocalStream = null;
+    globalRemoteStream = null;
+    globalPendingCandidates = [];
+    incomingCall.value = null;
+    incomingCallDeclining.value = false;
+    incomingCallJoining.value = false;
+    globalCallState.value = 'idle';
+    globalCallStatus.value = '';
+    globalCallError.value = '';
+
+    void attachGlobalStreams();
+};
+
+const createGlobalPeerConnection = () => {
+    if (globalPeerConnection) return globalPeerConnection;
+
+    globalPeerConnection = new RTCPeerConnection({
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+        ],
+    });
+
+    globalPeerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+            void sendGlobalCallSignal('ice-candidate', { candidate: event.candidate.toJSON() });
+        }
+    };
+
+    globalPeerConnection.ontrack = (event) => {
+        globalRemoteStream = event.streams?.[0] || globalRemoteStream || new MediaStream();
+
+        if (!event.streams?.length) {
+            globalRemoteStream.addTrack(event.track);
+        }
+
+        globalCallState.value = 'active';
+        globalCallStatus.value = 'Appel en cours';
+        void attachGlobalStreams();
+    };
+
+    globalPeerConnection.onconnectionstatechange = () => {
+        if (!globalPeerConnection) return;
+
+        if (globalPeerConnection.connectionState === 'connected') {
+            globalCallState.value = 'active';
+            globalCallStatus.value = 'Appel en cours';
+        }
+
+        if (['failed', 'disconnected'].includes(globalPeerConnection.connectionState)) {
+            globalCallStatus.value = 'Connexion interrompue';
+        }
+    };
+
+    return globalPeerConnection;
+};
+
+const flushGlobalCandidates = async () => {
+    if (!globalPeerConnection || !globalPeerConnection.remoteDescription) return;
+
+    const candidates = [...globalPendingCandidates];
+    globalPendingCandidates = [];
+
+    for (const candidate of candidates) {
+        try {
+            await globalPeerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (error) {
+            console.warn('Candidat ICE ignore', error);
+        }
     }
 };
 
-const handleUserCallSignal = (event) => {
+const addGlobalCandidate = async (candidate) => {
+    if (!candidate) return;
+
+    if (!globalPeerConnection || !globalPeerConnection.remoteDescription) {
+        globalPendingCandidates.push(candidate);
+        return;
+    }
+
+    try {
+        await globalPeerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+    } catch (error) {
+        console.warn('Candidat ICE ignore', error);
+    }
+};
+
+const endGlobalCall = (notify = true) => {
+    const shouldNotify = notify && incomingCall.value?.conversation_id && globalCallState.value !== 'idle';
+
+    if (shouldNotify) {
+        void sendGlobalCallSignal('call-end').catch((error) => console.warn('Fin d appel non envoyee', error));
+    }
+
+    cleanupGlobalCall();
+};
+
+const handleUserCallSignal = async (event) => {
     if (!event || Number(event.sender_id) === Number(user.value?.id) || route().current('messages.index')) {
+        return;
+    }
+
+    if (event.type !== 'call-offer' && incomingCall.value?.conversation_id && Number(event.conversation_id) !== Number(incomingCall.value.conversation_id)) {
         return;
     }
 
     if (event.type === 'call-offer') {
         if (!event.payload?.description) return;
+
+        if (globalCallState.value !== 'idle') {
+            await window.axios.post(route('calls.signal', event.conversation_id), {
+                type: 'call-decline',
+                mode: event.mode || 'audio',
+                payload: { reason: 'busy' },
+            }, { timeout: 10000 }).catch((error) => console.warn('Signal occupe non envoye', error));
+            return;
+        }
 
         incomingCall.value = {
             ...event,
@@ -110,68 +295,71 @@ const handleUserCallSignal = (event) => {
                 candidates: event.payload?.candidates || [],
             },
         };
+        globalPendingCandidates = incomingCall.value.payload.candidates.filter(Boolean);
         incomingCallJoining.value = false;
         incomingCallDeclining.value = false;
+        globalCallState.value = 'incoming';
+        globalCallStatus.value = event.mode === 'video' ? 'Appel video entrant' : 'Appel audio entrant';
+        globalCallError.value = '';
         return;
     }
 
-    if (event.type === 'ice-candidate' && sameIncomingCall(event)) {
-        const candidate = event.payload?.candidate;
-        if (!candidate) return;
-
-        const payload = incomingCall.value.payload || {};
-        incomingCall.value = {
-            ...incomingCall.value,
-            payload: {
-                ...payload,
-                candidates: [...(payload.candidates || []), candidate],
-            },
-        };
-
-        if (incomingCallJoining.value) {
-            persistIncomingCall(incomingCall.value, true);
-        }
-
+    if (event.type === 'ice-candidate') {
+        await addGlobalCandidate(event.payload?.candidate);
         return;
     }
 
-    if (['call-answer', 'call-decline', 'call-end'].includes(event.type) && sameIncomingCall(event)) {
-        incomingCall.value = null;
-        incomingCallJoining.value = false;
-        incomingCallDeclining.value = false;
+    if (['call-answer', 'call-decline', 'call-end'].includes(event.type)) {
+        cleanupGlobalCall();
     }
 };
 
-const acceptIncomingCall = () => {
-    if (!incomingCall.value?.url || incomingCallJoining.value) return;
+const acceptIncomingCall = async () => {
+    if (!incomingCall.value?.payload?.description || incomingCallJoining.value) return;
 
     incomingCallJoining.value = true;
-    persistIncomingCall(incomingCall.value, true);
+    globalCallError.value = '';
+    globalCallState.value = 'connecting';
+    globalCallStatus.value = 'Demande d acces au micro et a la camera...';
     mobileMenuOpen.value = false;
-    router.visit(incomingCall.value.url);
+
+    try {
+        await requestGlobalLocalStream(incomingCall.value.mode || 'audio');
+        if (!globalCallStatus.value.includes('Camera indisponible')) {
+            globalCallStatus.value = 'Connexion de l appel...';
+        }
+
+        const connection = createGlobalPeerConnection();
+        globalLocalStream.getTracks().forEach((track) => connection.addTrack(track, globalLocalStream));
+
+        await connection.setRemoteDescription(new RTCSessionDescription(incomingCall.value.payload.description));
+        await flushGlobalCandidates();
+
+        const answer = await connection.createAnswer();
+        await connection.setLocalDescription(answer);
+
+        await sendGlobalCallSignal('call-answer', { description: connection.localDescription });
+
+        globalCallState.value = 'active';
+        globalCallStatus.value = 'Appel en cours';
+    } catch (error) {
+        globalCallError.value = mediaErrorMessage(error);
+        globalCallState.value = 'incoming';
+        incomingCallJoining.value = false;
+    }
 };
 
 const declineIncomingCall = () => {
     if (!incomingCall.value || incomingCallDeclining.value) return;
 
-    const call = incomingCall.value;
     incomingCallDeclining.value = true;
 
-    window.axios.post(route('calls.signal', call.conversation_id), {
-        type: 'call-decline',
-        mode: call.mode || 'audio',
-        payload: { reason: 'declined' },
-    }, { timeout: 10000 })
+    sendGlobalCallSignal('call-decline', { reason: 'declined' })
         .catch((error) => {
             console.warn('Refus d appel non envoye', error);
         })
         .finally(() => {
-            if (sameIncomingCall(call)) {
-                incomingCall.value = null;
-            }
-
-            incomingCallDeclining.value = false;
-            incomingCallJoining.value = false;
+            cleanupGlobalCall();
         });
 };
 
@@ -184,16 +372,18 @@ onMounted(() => {
         .listen('.notification.created', (event) => {
             liveUnreadCount.value += 1;
             showLiveNotice(event.notification);
-
-            const call = incomingCallFromNotification(event.notification);
-            if (call) {
-                handleUserCallSignal(call);
-            }
         })
         .listen('.call.signal', handleUserCallSignal);
 });
 
 onBeforeUnmount(() => {
+    if (globalCallState.value === 'incoming') {
+        void sendGlobalCallSignal('call-decline', { reason: 'declined' }).catch(() => {});
+        cleanupGlobalCall();
+    } else if (globalCallState.value !== 'idle') {
+        endGlobalCall();
+    }
+
     if (window.Echo && user.value?.id) {
         window.Echo.leave(`users.${user.value.id}`);
     }
@@ -421,25 +611,59 @@ const openReportModal = () => {
             </main>
         </div>
 
-        <div v-if="incomingCall" class="fixed inset-x-4 bottom-4 z-50 sm:left-auto sm:right-6 sm:w-96">
-            <div class="rounded-lg border border-amber-200 bg-white p-4 shadow-2xl">
-                <div class="flex items-start gap-3">
-                    <div class="grid size-11 shrink-0 place-items-center rounded-lg bg-tutor-gold text-tutor-navy">
-                        <component :is="incomingCallIcon" class="size-5" />
+        <div v-if="incomingCall" class="fixed inset-0 z-50 grid place-items-center bg-slate-950/75 px-4 py-6 backdrop-blur-sm">
+            <div class="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-2xl">
+                <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-wide text-[#9a6200]">{{ incomingCall.mode === 'video' ? 'Appel video' : 'Appel audio' }}</p>
+                        <h2 class="mt-1 text-xl font-bold text-tutor-navy">{{ globalCallTitle }}</h2>
+                        <p class="mt-1 text-sm text-slate-500">{{ globalCallStatus }}</p>
                     </div>
-                    <div class="min-w-0 flex-1">
-                        <p class="text-sm font-bold text-tutor-navy">{{ incomingCallTitle }}</p>
-                        <p class="mt-1 text-sm text-slate-600">{{ incomingCall.sender_name || 'Un utilisateur' }} vous appelle.</p>
+                    <button type="button" class="grid size-10 place-items-center rounded-lg border border-slate-200 text-slate-500 transition hover:text-red-600" @click="globalCallState === 'incoming' ? declineIncomingCall() : endGlobalCall()">
+                        <X class="size-4" />
+                    </button>
+                </div>
+
+                <div v-if="globalCallError" class="border-b border-red-200 bg-red-50 px-5 py-3 text-sm font-semibold text-red-700">
+                    {{ globalCallError }}
+                </div>
+
+                <div v-if="incomingCall.mode === 'video' && globalCallState !== 'incoming'" class="relative aspect-video bg-slate-950">
+                    <video ref="globalRemoteVideo" autoplay playsinline class="h-full w-full object-cover"></video>
+                    <div v-if="globalCallState !== 'active'" class="absolute inset-0 grid place-items-center bg-slate-950 text-center text-white">
+                        <div>
+                            <component :is="incomingCallIcon" class="mx-auto size-10 text-[#feae2c]" />
+                            <p class="mt-4 text-sm font-semibold">{{ globalCallStatus }}</p>
+                        </div>
+                    </div>
+                    <video ref="globalLocalVideo" autoplay muted playsinline class="absolute bottom-3 right-3 h-20 w-28 rounded-lg border border-white/30 bg-slate-900 object-cover shadow-xl sm:bottom-4 sm:right-4 sm:h-28 sm:w-40"></video>
+                </div>
+
+                <div v-else class="grid min-h-[280px] place-items-center bg-[#f7f8fb] px-6 py-10 text-center">
+                    <div>
+                        <div class="mx-auto grid size-24 place-items-center rounded-full bg-tutor-navy text-white">
+                            <component :is="incomingCallIcon" class="size-10" />
+                        </div>
+                        <p class="mt-5 text-lg font-bold text-tutor-navy">{{ incomingCall.sender_name || 'Votre correspondant' }}</p>
+                        <p class="mt-2 text-sm text-slate-500">{{ globalCallStatus }}</p>
+                        <audio ref="globalRemoteAudio" autoplay playsinline></audio>
                     </div>
                 </div>
-                <div class="mt-4 grid grid-cols-2 gap-2">
-                    <button type="button" class="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-60" :disabled="incomingCallJoining || incomingCallDeclining" @click="acceptIncomingCall">
-                        <component :is="incomingCallIcon" class="size-4" />
-                        {{ incomingCallJoining ? 'Ouverture...' : 'Accepter' }}
-                    </button>
-                    <button type="button" class="inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-60" :disabled="incomingCallJoining || incomingCallDeclining" @click="declineIncomingCall">
+
+                <div class="flex flex-wrap items-center justify-center gap-3 border-t border-slate-200 px-5 py-4">
+                    <template v-if="globalCallState === 'incoming'">
+                        <button type="button" class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60" :disabled="incomingCallJoining || incomingCallDeclining" @click="acceptIncomingCall">
+                            <component :is="incomingCallIcon" class="size-4" />
+                            {{ incomingCallJoining ? 'Connexion...' : 'Accepter' }}
+                        </button>
+                        <button type="button" class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-red-700 disabled:opacity-60" :disabled="incomingCallJoining || incomingCallDeclining" @click="declineIncomingCall">
+                            <PhoneOff class="size-4" />
+                            {{ incomingCallDeclining ? 'Refus...' : 'Refuser' }}
+                        </button>
+                    </template>
+                    <button v-else type="button" class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-red-700" @click="endGlobalCall()">
                         <PhoneOff class="size-4" />
-                        {{ incomingCallDeclining ? 'Refus...' : 'Refuser' }}
+                        Raccrocher
                     </button>
                 </div>
             </div>

@@ -239,31 +239,7 @@ class PlatformWorkflowTest extends TestCase
             ])
             ->assertNoContent();
 
-        $this->assertDatabaseHas('notifications', [
-            'notifiable_id' => $tutor->id,
-            'read_at' => null,
-        ]);
-
-        $notification = DB::table('notifications')
-            ->where('notifiable_id', $tutor->id)
-            ->latest('created_at')
-            ->first();
-
-        $data = json_decode($notification->data, true);
-
-        $this->assertSame('call-offer', $data['call']['type']);
-        $this->assertSame('video', $data['call']['mode']);
-        $this->assertSame($conversation->id, $data['call']['conversation_id']);
-
-        $this->actingAs($tutor)
-            ->get(route('notifications.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('Notifications/Index')
-                ->where('items.data.0.call.type', 'call-offer')
-                ->where('items.data.0.call.mode', 'video')
-                ->where('items.data.0.call.conversation_id', $conversation->id)
-            );
+        $this->assertDatabaseCount('notifications', 0);
     }
 
     public function test_call_signals_require_a_participant_and_an_accepted_booking(): void

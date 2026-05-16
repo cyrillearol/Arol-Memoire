@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Events\ConversationCallSignal;
 use App\Events\UserCallSignal;
 use App\Models\Conversation;
-use App\Support\PlatformNotifier;
 use App\Support\RealtimeBroadcaster;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -36,32 +35,6 @@ class CallSignalController extends Controller
         $recipient = $user->id === $conversation->student_id
             ? $conversation->tutor
             : $conversation->student;
-
-        if ($validated['type'] === 'call-offer') {
-            $modeLabel = ($validated['mode'] ?? 'audio') === 'video' ? 'vidéo' : 'audio';
-            $subject = $conversation->booking?->subject ? ' pour la séance de '.$conversation->booking->subject : '';
-
-            $url = route('messages.index', $conversation);
-
-            PlatformNotifier::send(
-                $recipient,
-                'Appel '.$modeLabel.' entrant',
-                $user->name.' vous a appelé'.$subject.'.',
-                $url,
-                'warning',
-                [
-                    'call' => [
-                        'conversation_id' => $conversation->id,
-                        'sender_id' => $user->id,
-                        'sender_name' => $user->name,
-                        'type' => $validated['type'],
-                        'mode' => $validated['mode'] ?? null,
-                        'payload' => $validated['payload'] ?? [],
-                        'url' => $url,
-                    ],
-                ]
-            );
-        }
 
         RealtimeBroadcaster::send(new ConversationCallSignal(
             conversationId: $conversation->id,

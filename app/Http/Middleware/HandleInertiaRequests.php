@@ -47,7 +47,8 @@ class HandleInertiaRequests extends Middleware
 
         $query = DB::table('notifications')
             ->where('notifiable_type', User::class)
-            ->where('notifiable_id', $user->id);
+            ->where('notifiable_id', $user->id)
+            ->where('data', 'not like', '%"call"%');
 
         $recent = (clone $query)
             ->latest('created_at')

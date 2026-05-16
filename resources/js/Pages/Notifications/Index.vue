@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link, router } from '@inertiajs/vue3';
-import { Bell, CheckCheck, ExternalLink, PhoneIncoming, PhoneOff, Video } from 'lucide-vue-next';
+import { Head, Link } from '@inertiajs/vue3';
+import { Bell, CheckCheck, ExternalLink } from 'lucide-vue-next';
 
 defineProps({
     items: {
@@ -17,40 +17,6 @@ const toneClass = (tone) => ({
     info: 'border-blue-200 bg-blue-50 text-tutor-navy',
 }[tone] || 'border-slate-200 bg-white text-tutor-navy');
 
-const isCallNotification = (notification) => notification.call?.type === 'call-offer' && notification.call?.payload?.description;
-
-const acceptCall = (notification) => {
-    if (!isCallNotification(notification)) return;
-
-    try {
-        window.sessionStorage?.setItem('tutorlink:incoming-call', JSON.stringify({
-            ...notification.call,
-            url: notification.call.url || notification.url,
-            payload: {
-                ...(notification.call.payload || {}),
-                candidates: notification.call.payload?.candidates || [],
-            },
-            auto_accept: true,
-            stored_at: Date.now(),
-        }));
-    } catch (error) {
-        console.warn('Appel entrant non sauvegarde', error);
-    }
-
-    router.visit(notification.call.url || notification.url);
-};
-
-const declineCall = (notification) => {
-    if (!notification.call?.conversation_id) return;
-
-    window.axios.post(route('calls.signal', notification.call.conversation_id), {
-        type: 'call-decline',
-        mode: notification.call.mode || 'audio',
-        payload: { reason: 'declined' },
-    }, { timeout: 10000 })
-        .then(() => router.patch(route('notifications.read', notification.id), {}, { preserveScroll: true }))
-        .catch((error) => console.warn('Refus d appel non envoye', error));
-};
 </script>
 
 <template>
@@ -93,18 +59,7 @@ const declineCall = (notification) => {
                         </div>
 
                         <div class="flex shrink-0 flex-wrap gap-2">
-                            <template v-if="isCallNotification(notification)">
-                                <button type="button" class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-emerald-700" @click="acceptCall(notification)">
-                                    <Video v-if="notification.call.mode === 'video'" class="size-4" />
-                                    <PhoneIncoming v-else class="size-4" />
-                                    Accepter
-                                </button>
-                                <button type="button" class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-red-700" @click="declineCall(notification)">
-                                    <PhoneOff class="size-4" />
-                                    Refuser
-                                </button>
-                            </template>
-                            <a v-else-if="notification.url" :href="notification.url" class="tl-button-secondary px-4 py-2 text-xs">
+                            <a v-if="notification.url" :href="notification.url" class="tl-button-secondary px-4 py-2 text-xs">
                                 <ExternalLink class="size-4" />
                                 Ouvrir
                             </a>
