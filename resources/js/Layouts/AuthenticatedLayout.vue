@@ -1,6 +1,5 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import GlobalCallHandler from '@/Components/GlobalCallHandler.vue';
 import { Link, useForm, usePage } from '@inertiajs/vue3';
 import {
     AlertCircle,
@@ -323,6 +322,5 @@ const openReportModal = () => {
                 </div>
             </form>
         </div>
-        <GlobalCallHandler />
     </div>
 </template>

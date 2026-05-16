@@ -18,22 +18,11 @@ class ConversationCallSignal implements ShouldBroadcastNow
         public string $type,
         public ?string $mode = null,
         public array $payload = [],
-        public ?int $recipientId = null,
-        public ?string $senderName = null,
     ) {}
 
-    /**
-     * @return array<int, PrivateChannel>
-     */
-    public function broadcastOn(): array
+    public function broadcastOn(): PrivateChannel
     {
-        $channels = [new PrivateChannel('conversations.'.$this->conversationId)];
-
-        if ($this->recipientId) {
-            $channels[] = new PrivateChannel('users.'.$this->recipientId);
-        }
-
-        return $channels;
+        return new PrivateChannel('conversations.'.$this->conversationId);
     }
 
     public function broadcastAs(): string
@@ -49,7 +38,6 @@ class ConversationCallSignal implements ShouldBroadcastNow
         return [
             'conversation_id' => $this->conversationId,
             'sender_id' => $this->senderId,
-            'sender_name' => $this->senderName,
             'type' => $this->type,
             'mode' => $this->mode,
             'payload' => $this->payload,

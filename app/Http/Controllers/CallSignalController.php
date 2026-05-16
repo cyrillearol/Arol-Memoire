@@ -29,11 +29,10 @@ class CallSignalController extends Controller
             'payload' => ['nullable', 'array'],
         ]);
 
-        $recipient = $user->id === $conversation->student_id
-            ? $conversation->tutor
-            : $conversation->student;
-
         if ($validated['type'] === 'call-offer') {
+            $recipient = $user->id === $conversation->student_id
+                ? $conversation->tutor
+                : $conversation->student;
             $modeLabel = ($validated['mode'] ?? 'audio') === 'video' ? 'vidéo' : 'audio';
             $subject = $conversation->booking?->subject ? ' pour la séance de '.$conversation->booking->subject : '';
 
@@ -52,8 +51,6 @@ class CallSignalController extends Controller
             type: $validated['type'],
             mode: $validated['mode'] ?? null,
             payload: $validated['payload'] ?? [],
-            recipientId: $recipient?->id,
-            senderName: $user->name,
         ), true);
 
         return response()->noContent();
