@@ -28,6 +28,7 @@ class NotificationController extends Controller
                     'body' => $data['body'] ?? '',
                     'url' => $data['url'] ?? null,
                     'tone' => $data['tone'] ?? 'info',
+                    'call' => $data['call'] ?? null,
                     'read_at' => $notification->read_at,
                     'created_at' => $notification->created_at,
                 ];
