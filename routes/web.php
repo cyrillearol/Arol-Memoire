@@ -51,6 +51,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/disponibilites/{availability}', [AvailabilityController::class, 'update'])->name('availabilities.update');
     Route::delete('/disponibilites/{availability}', [AvailabilityController::class, 'destroy'])->name('availabilities.destroy');
 
+    Route::get('/messages/documents/{message}', [MessageController::class, 'downloadAttachment'])->name('messages.attachments.show');
     Route::get('/messages/{conversation?}', [MessageController::class, 'index'])->name('messages.index');
     Route::post('/messages/{conversation}', [MessageController::class, 'store'])->name('messages.store');
     Route::post('/messages/{conversation}/appel', [CallSignalController::class, 'store'])->name('calls.signal');

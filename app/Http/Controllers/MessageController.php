@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class MessageController extends Controller
 {
@@ -97,6 +98,17 @@ class MessageController extends Controller
         return redirect()->route('messages.index', $conversation)->with('success', 'Message envoyé.');
     }
 
+    public function downloadAttachment(Request $request, Message $message): BinaryFileResponse
+    {
+        $message->loadMissing('conversation');
+        $this->ensureParticipant($message->conversation, $request->user()->id);
+
+        abort_if(blank($message->attachment_path), 404);
+        abort_unless(Storage::disk('public')->exists($message->attachment_path), 404);
+
+        return response()->file(Storage::disk('public')->path($message->attachment_path));
+    }
+
     private function ensureParticipant(Conversation $conversation, int $userId): void
     {
         abort_unless($conversation->student_id === $userId || $conversation->tutor_id === $userId, 403);
@@ -138,7 +150,7 @@ class MessageController extends Controller
             'id' => $message->id,
             'conversation_id' => $message->conversation_id,
             'body' => $message->body,
-            'attachment_url' => $message->attachment_path ? Storage::url($message->attachment_path) : null,
+            'attachment_url' => $message->attachment_path ? route('messages.attachments.show', $message, false) : null,
             'sender_id' => $message->sender_id,
             'sender_name' => $message->sender?->name,
             'is_mine' => $message->sender_id === $viewerId,
