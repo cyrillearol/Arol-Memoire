@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Notifications\BrevoResetPasswordNotification;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -93,5 +94,15 @@ class User extends Authenticatable
     public function reportsReceived(): HasMany
     {
         return $this->hasMany(Report::class, 'reported_user_id');
+    }
+
+    public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
+    {
+        $this->notify(new BrevoResetPasswordNotification($token));
+    }
+
+    public function routeNotificationForBrevo(): string
+    {
+        return $this->email;
     }
 }

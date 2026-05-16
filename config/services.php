@@ -22,6 +22,11 @@ return [
         'key' => env('RESEND_API_KEY'),
     ],
 
+    'brevo' => [
+        'key' => env('BREVO_API_KEY'),
+        'timeout' => env('BREVO_TIMEOUT', 10),
+    ],
+
     'kkiapay' => [
         'public_key' => env('KKIAPAY_PUBLIC_KEY'),
         'private_key' => env('KKIAPAY_PRIVATE_KEY'),
