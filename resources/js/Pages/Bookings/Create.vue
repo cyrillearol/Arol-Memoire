@@ -1,8 +1,10 @@
 <script setup>
 import PublicFooter from '@/Components/PublicFooter.vue';
 import PublicHeader from '@/Components/PublicHeader.vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { computed, onMounted, ref, watch } from 'vue';
+
+const page = usePage();
 
 const props = defineProps({
     tutor: Object,
@@ -26,6 +28,10 @@ const firstSlotFor = (duration) => slots.value.find((slot) => slot.available_dur
 const paymentError = ref('');
 const paymentStatus = ref('');
 const kkiapayReady = ref(false);
+const payer = computed(() => page.props.auth?.user || {});
+const KKIAPAY_SCRIPT_URL = 'https://cdn.kkiapay.me/k.js';
+let kkiapayScriptPromise = null;
+let kkiapayListenersRegistered = false;
 
 const form = useForm({
     subject: props.tutor.subjects?.[0] || '',
@@ -79,39 +85,138 @@ watch(
     },
 );
 
-const loadKkiapayScript = () => new Promise((resolve, reject) => {
-    if (window.openKkiapayWidget) {
+const hasKkiapayWidget = () => typeof window.openKkiapayWidget === 'function';
+
+const loadKkiapayScript = () => {
+    if (hasKkiapayWidget()) {
         kkiapayReady.value = true;
-        resolve();
-        return;
+        return Promise.resolve();
     }
 
-    const existingScript = document.querySelector('script[src="https://cdn.kkiapay.me/k.js"]');
-    if (existingScript) {
-        existingScript.addEventListener('load', () => {
+    if (kkiapayScriptPromise) {
+        return kkiapayScriptPromise;
+    }
+
+    kkiapayScriptPromise = new Promise((resolve, reject) => {
+        let settled = false;
+        let script = document.querySelector(`script[src="${KKIAPAY_SCRIPT_URL}"]`);
+
+        const cleanup = () => {
+            script?.removeEventListener('load', handleLoad);
+            script?.removeEventListener('error', handleError);
+            window.clearTimeout(timeout);
+        };
+
+        const succeed = () => {
+            if (settled) return;
+            settled = true;
+            cleanup();
             kkiapayReady.value = true;
             resolve();
-        }, { once: true });
-        existingScript.addEventListener('error', reject, { once: true });
-        return;
-    }
+        };
 
-    const script = document.createElement('script');
-    script.src = 'https://cdn.kkiapay.me/k.js';
-    script.async = true;
-    script.onload = () => {
-        kkiapayReady.value = true;
-        resolve();
-    };
-    script.onerror = reject;
-    document.head.appendChild(script);
-});
+        const fail = (error) => {
+            if (settled) return;
+            settled = true;
+            cleanup();
+            kkiapayReady.value = false;
+            kkiapayScriptPromise = null;
+            reject(error instanceof Error ? error : new Error('KKIAPAY_SCRIPT_LOAD_FAILED'));
+        };
+
+        function handleLoad() {
+            script.dataset.kkiapayLoaded = 'true';
+
+            if (hasKkiapayWidget()) {
+                succeed();
+                return;
+            }
+
+            fail(new Error('KKIAPAY_WIDGET_UNAVAILABLE'));
+        }
+
+        function handleError() {
+            script?.remove();
+            fail(new Error('KKIAPAY_SCRIPT_LOAD_FAILED'));
+        }
+
+        const timeout = window.setTimeout(() => {
+            if (hasKkiapayWidget()) {
+                succeed();
+                return;
+            }
+
+            fail(new Error('KKIAPAY_SCRIPT_TIMEOUT'));
+        }, 12000);
+
+        if (!script) {
+            script = document.createElement('script');
+            script.src = KKIAPAY_SCRIPT_URL;
+            script.async = true;
+            script.defer = true;
+            document.head.appendChild(script);
+        }
+
+        script.addEventListener('load', handleLoad);
+        script.addEventListener('error', handleError);
+
+        if (script.dataset.kkiapayLoaded === 'true' && hasKkiapayWidget()) {
+            succeed();
+        }
+    });
+
+    return kkiapayScriptPromise;
+};
 
 const transactionIdFrom = (response) => response?.transactionId
     || response?.transaction_id
     || response?.data?.transactionId
     || response?.data?.transaction_id
     || response?.paymentReference;
+
+const handleKkiapaySuccess = (response) => {
+    const transactionId = transactionIdFrom(response);
+
+    if (!transactionId) {
+        paymentStatus.value = '';
+        paymentError.value = 'Transaction Kkiapay sans référence. Réessayez.';
+        return;
+    }
+
+    paymentError.value = '';
+    paymentStatus.value = 'Paiement reçu, finalisation...';
+    form.kkiapay_transaction_id = transactionId;
+    submit();
+};
+
+const registerKkiapayListeners = () => {
+    if (kkiapayListenersRegistered) return;
+
+    window.addSuccessListener?.(handleKkiapaySuccess);
+
+    window.addPendingListener?.(() => {
+        paymentError.value = '';
+        paymentStatus.value = 'Paiement en attente de confirmation...';
+    });
+
+    window.addFailedListener?.(() => {
+        paymentStatus.value = '';
+        paymentError.value = 'Le paiement Kkiapay a échoué.';
+    });
+
+    window.addPaymentAbortedListener?.(() => {
+        paymentStatus.value = '';
+        paymentError.value = 'Paiement annulé.';
+    });
+
+    window.addKkiapayCloseListener?.(() => {
+        if (!form.kkiapay_transaction_id && !form.processing) {
+            paymentStatus.value = '';
+        }
+    });
+
+    kkiapayListenersRegistered = true;
+};
 
 const submit = () => {
     if (!form.scheduled_at || !form.kkiapay_transaction_id) return;
@@ -155,59 +260,51 @@ const startKkiapayPayment = async () => {
     try {
         paymentStatus.value = 'Chargement du paiement...';
         await loadKkiapayScript();
+        registerKkiapayListeners();
     } catch (error) {
         paymentStatus.value = '';
-        paymentError.value = 'Impossible de charger Kkiapay. Vérifiez votre connexion.';
+        paymentError.value = 'Impossible de charger Kkiapay. Vérifiez votre connexion, puis réessayez.';
         return;
     }
 
-    paymentStatus.value = '';
+    if (!hasKkiapayWidget()) {
+        paymentStatus.value = '';
+        paymentError.value = 'Kkiapay n’est pas prêt. Actualisez la page puis réessayez.';
+        return;
+    }
 
-    window.openKkiapayWidget({
-        amount: total.value,
-        key: props.payment.public_key,
-        apikey: props.payment.public_key,
-        api_key: props.payment.public_key,
-        publicAPIKey: props.payment.public_key,
-        sandbox: isKkiapaySandbox.value,
-        position: 'center',
-        theme: '#022448',
-        paymentMethods: ['momo', 'card'],
-        data: {
-            tutor_id: props.tutor.id,
-            scheduled_at: form.scheduled_at,
-            subject: form.subject,
-            duration_minutes: form.duration_minutes,
-        },
-    });
+    paymentStatus.value = 'Ouverture du paiement...';
+
+    try {
+        window.openKkiapayWidget({
+            amount: total.value,
+            key: props.payment.public_key,
+            sandbox: isKkiapaySandbox.value,
+            position: 'center',
+            theme: '#022448',
+            paymentMethods: ['momo', 'card'],
+            name: payer.value.name,
+            email: payer.value.email,
+            data: {
+                tutor_id: props.tutor.id,
+                scheduled_at: form.scheduled_at,
+                subject: form.subject,
+                duration_minutes: form.duration_minutes,
+            },
+        });
+    } catch (error) {
+        paymentStatus.value = '';
+        paymentError.value = 'Impossible d’ouvrir l’interface Kkiapay. Réessayez.';
+    }
 };
 
 onMounted(async () => {
     try {
         await loadKkiapayScript();
+        registerKkiapayListeners();
     } catch (error) {
-        return;
+        kkiapayReady.value = false;
     }
-
-    window.addSuccessListener?.((response) => {
-        const transactionId = transactionIdFrom(response);
-
-        if (!transactionId) {
-            paymentStatus.value = '';
-            paymentError.value = 'Transaction Kkiapay sans référence. Réessayez.';
-            return;
-        }
-
-        paymentError.value = '';
-        paymentStatus.value = 'Paiement reçu, finalisation...';
-        form.kkiapay_transaction_id = transactionId;
-        submit();
-    });
-
-    window.addFailedListener?.(() => {
-        paymentStatus.value = '';
-        paymentError.value = 'Le paiement Kkiapay a échoué.';
-    });
 });
 </script>
 
