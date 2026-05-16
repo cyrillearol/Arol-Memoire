@@ -1,6 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 
 const props = defineProps({
     userItem: { type: Object, required: true },
@@ -29,6 +29,7 @@ const patchWithConfirmation = (url, message) => {
                     <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold">{{ userItem.status }}</span>
                 </div>
                 <div class="mt-6 grid gap-2">
+                    <Link v-if="userItem.role === 'tuteur' && userItem.status === 'actif'" :href="route('admin.tutors.message', userItem.id)" method="post" as="button" class="tl-button-primary text-center">Contacter ce tuteur</Link>
                     <button v-if="userItem.status !== 'suspendu'" type="button" class="rounded-lg border border-red-200 px-4 py-3 text-sm font-bold text-red-600" @click="patchWithConfirmation(route('admin.users.suspend', userItem.id), `Suspendre le compte de ${userItem.name} ?`)">Suspendre</button>
                     <button v-else type="button" class="tl-button-primary" @click="patchWithConfirmation(route('admin.users.activate', userItem.id), `Réactiver le compte de ${userItem.name} ?`)">Réactiver</button>
                 </div>

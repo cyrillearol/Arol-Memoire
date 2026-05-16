@@ -47,6 +47,7 @@ const patchWithConfirmation = (url, message) => {
                         <td class="px-5 py-4">
                             <div class="flex flex-wrap gap-2">
                                 <Link :href="route('admin.users.show', user.id)" class="tl-button-secondary px-3 py-2 text-xs">Détails</Link>
+                                <Link v-if="user.status === 'actif'" :href="route('admin.tutors.message', user.id)" method="post" as="button" class="rounded-lg bg-tutor-navy px-3 py-2 text-xs font-bold text-white">Message</Link>
                                 <button v-if="user.status !== 'actif'" type="button" class="rounded-lg bg-emerald-100 px-3 py-2 text-xs font-bold text-emerald-700" @click="patchWithConfirmation(route('admin.tutors.accept', user.id), `Valider le profil tuteur de ${user.name} ?`)">Valider</button>
                                 <button v-if="user.status === 'en_attente'" type="button" class="rounded-lg bg-red-100 px-3 py-2 text-xs font-bold text-red-700" @click="patchWithConfirmation(route('admin.tutors.reject', user.id), `Refuser la candidature de ${user.name} ?`)">Refuser</button>
                                 <button v-if="user.status !== 'suspendu'" type="button" class="rounded-lg bg-amber-100 px-3 py-2 text-xs font-bold text-amber-700" @click="patchWithConfirmation(route('admin.tutors.suspend', user.id), `Suspendre le profil tuteur de ${user.name} ?`)">Suspendre</button>

@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 
 class PlatformNotifier
 {
-    public static function send(User $user, string $title, string $body, ?string $url = null, string $tone = 'info'): void
+    public static function send(User $user, string $title, string $body, ?string $url = null, string $tone = 'info', array $meta = []): void
     {
         if (! $user->exists) {
             return;
@@ -21,6 +21,7 @@ class PlatformNotifier
             'body' => $body,
             'url' => $url,
             'tone' => $tone,
+            ...$meta,
         ];
 
         DB::table('notifications')->insert([

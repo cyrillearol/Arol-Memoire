@@ -61,6 +61,23 @@ const showLiveNotice = (notification) => {
     }, 8000);
 };
 
+const incomingCallFromNotification = (notification) => {
+    const call = notification?.call;
+
+    if (!call || call.type !== 'call-offer') {
+        return null;
+    }
+
+    return {
+        ...call,
+        url: call.url || notification.url,
+        payload: {
+            ...(call.payload || {}),
+            candidates: call.payload?.candidates || [],
+        },
+    };
+};
+
 const sameIncomingCall = (event) => incomingCall.value
     && Number(incomingCall.value.conversation_id) === Number(event?.conversation_id);
 
@@ -167,6 +184,11 @@ onMounted(() => {
         .listen('.notification.created', (event) => {
             liveUnreadCount.value += 1;
             showLiveNotice(event.notification);
+
+            const call = incomingCallFromNotification(event.notification);
+            if (call) {
+                handleUserCallSignal(call);
+            }
         })
         .listen('.call.signal', handleUserCallSignal);
 });

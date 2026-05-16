@@ -24,7 +24,7 @@ const sendingMessage = ref(false);
 const fileInput = ref(null);
 const messagesPanel = ref(null);
 
-const canCall = computed(() => props.selectedConversation?.booking?.status === 'acceptee');
+const canCall = computed(() => Boolean(props.selectedConversation?.can_call));
 const activeCallConversation = computed(() => {
     const targetId = callConversationId.value || props.selectedConversation?.id;
 

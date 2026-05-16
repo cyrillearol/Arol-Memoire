@@ -30,6 +30,29 @@ class PlatformWorkflowTest extends TestCase
             'status' => 'actif',
         ]);
 
+        $conversation = Conversation::query()->whereNull('booking_id')->where([
+            'student_id' => $admin->id,
+            'tutor_id' => $pendingTutor->id,
+        ])->first();
+
+        $this->assertNotNull($conversation);
+
+        $this->actingAs($admin)
+            ->post(route('messages.store', $conversation), [
+                'body' => 'Bienvenue dans l espace tuteur.',
+            ])
+            ->assertRedirect(route('messages.index', $conversation));
+
+        $this->assertDatabaseHas('messages', [
+            'conversation_id' => $conversation->id,
+            'sender_id' => $admin->id,
+            'body' => 'Bienvenue dans l espace tuteur.',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.tutors.message', $pendingTutor))
+            ->assertRedirect(route('messages.index', $conversation));
+
         $this->actingAs($admin)
             ->patch(route('admin.tutors.suspend', $pendingTutor))
             ->assertRedirect();
@@ -220,6 +243,17 @@ class PlatformWorkflowTest extends TestCase
             'notifiable_id' => $tutor->id,
             'read_at' => null,
         ]);
+
+        $notification = DB::table('notifications')
+            ->where('notifiable_id', $tutor->id)
+            ->latest('created_at')
+            ->first();
+
+        $data = json_decode($notification->data, true);
+
+        $this->assertSame('call-offer', $data['call']['type']);
+        $this->assertSame('video', $data['call']['mode']);
+        $this->assertSame($conversation->id, $data['call']['conversation_id']);
     }
 
     public function test_call_signals_require_a_participant_and_an_accepted_booking(): void

@@ -58,7 +58,7 @@ class MessageController extends Controller
         $this->ensureParticipant($conversation, $user->id);
         $conversation->load(['booking', 'student', 'tutor']);
 
-        abort_unless(in_array($conversation->booking?->status, ['acceptee', 'terminee'], true), 403);
+        abort_unless($this->conversationAllowsMessages($conversation), 403);
 
         $validated = $request->validate([
             'body' => ['required_without:attachment', 'nullable', 'string', 'max:3000'],
@@ -114,6 +114,34 @@ class MessageController extends Controller
         abort_unless($conversation->student_id === $userId || $conversation->tutor_id === $userId, 403);
     }
 
+    private function conversationAllowsMessages(Conversation $conversation): bool
+    {
+        if (in_array($conversation->booking?->status, ['acceptee', 'terminee'], true)) {
+            return true;
+        }
+
+        return $this->isDirectAdminTutorConversation($conversation);
+    }
+
+    private function conversationAllowsCalls(Conversation $conversation): bool
+    {
+        if ($conversation->booking?->status === 'acceptee') {
+            return true;
+        }
+
+        return $this->isDirectAdminTutorConversation($conversation);
+    }
+
+    private function isDirectAdminTutorConversation(Conversation $conversation): bool
+    {
+        $conversation->loadMissing(['student', 'tutor']);
+
+        return $conversation->booking_id === null
+            && $conversation->student?->role === 'admin'
+            && $conversation->tutor?->role === 'tuteur'
+            && $conversation->tutor?->status === 'actif';
+    }
+
     private function conversationResource(Conversation $conversation, int $viewerId, bool $withMessages = false): array
     {
         $other = $viewerId === $conversation->student_id ? $conversation->tutor : $conversation->student;
@@ -123,6 +151,8 @@ class MessageController extends Controller
         return [
             'id' => $conversation->id,
             'booking_id' => $conversation->booking_id,
+            'type' => $conversation->booking_id ? 'reservation' : 'admin_tuteur',
+            'can_call' => $this->conversationAllowsCalls($conversation),
             'booking' => $conversation->booking ? [
                 'id' => $conversation->booking->id,
                 'subject' => $conversation->booking->subject,

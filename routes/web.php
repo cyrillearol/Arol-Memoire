@@ -69,6 +69,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('/signalements/{report}', [ReportModerationController::class, 'update'])->name('reports.update');
 
         Route::patch('/tuteurs/{tutor}/valider', [TutorModerationController::class, 'accept'])->name('tutors.accept');
+        Route::post('/tuteurs/{tutor}/message', [TutorModerationController::class, 'message'])->name('tutors.message');
         Route::patch('/tuteurs/{tutor}/rejeter', [TutorModerationController::class, 'reject'])->name('tutors.reject');
         Route::patch('/tuteurs/{tutor}/suspendre', [TutorModerationController::class, 'suspend'])->name('tutors.suspend');
         Route::get('/documents-tuteurs/{document}', [TutorModerationController::class, 'downloadDocument'])->name('tutor-documents.download');

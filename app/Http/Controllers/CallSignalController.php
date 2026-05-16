@@ -22,7 +22,10 @@ class CallSignalController extends Controller
         );
 
         $conversation->load(['booking', 'student', 'tutor']);
-        abort_unless($conversation->booking?->status === 'acceptee', 403);
+        abort_unless(
+            $conversation->booking?->status === 'acceptee' || $this->isDirectAdminTutorConversation($conversation),
+            403
+        );
 
         $validated = $request->validate([
             'type' => ['required', 'string', 'in:call-offer,call-answer,ice-candidate,call-end,call-decline'],
@@ -38,12 +41,25 @@ class CallSignalController extends Controller
             $modeLabel = ($validated['mode'] ?? 'audio') === 'video' ? 'vidéo' : 'audio';
             $subject = $conversation->booking?->subject ? ' pour la séance de '.$conversation->booking->subject : '';
 
+            $url = route('messages.index', $conversation);
+
             PlatformNotifier::send(
                 $recipient,
                 'Appel '.$modeLabel.' entrant',
                 $user->name.' vous a appelé'.$subject.'.',
-                route('messages.index', $conversation),
-                'warning'
+                $url,
+                'warning',
+                [
+                    'call' => [
+                        'conversation_id' => $conversation->id,
+                        'sender_id' => $user->id,
+                        'sender_name' => $user->name,
+                        'type' => $validated['type'],
+                        'mode' => $validated['mode'] ?? null,
+                        'payload' => $validated['payload'] ?? [],
+                        'url' => $url,
+                    ],
+                ]
             );
         }
 
@@ -66,5 +82,13 @@ class CallSignalController extends Controller
         ), true);
 
         return response()->noContent();
+    }
+
+    private function isDirectAdminTutorConversation(Conversation $conversation): bool
+    {
+        return $conversation->booking_id === null
+            && $conversation->student?->role === 'admin'
+            && $conversation->tutor?->role === 'tuteur'
+            && $conversation->tutor?->status === 'actif';
     }
 }

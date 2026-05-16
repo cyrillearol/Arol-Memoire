@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Conversation;
 use App\Models\TutorDocument;
 use App\Models\User;
 use App\Support\PlatformNotifier;
@@ -20,11 +21,13 @@ class TutorModerationController extends Controller
 
         $tutor->update(['status' => 'actif']);
 
+        $conversation = $this->directConversation($request, $tutor);
+
         PlatformNotifier::send(
             $tutor,
             'Profil tuteur validé',
-            'Votre profil est maintenant visible publiquement sur TutorLink.',
-            route('dashboard'),
+            'Votre profil est maintenant visible publiquement sur TutorLink. L\'administration peut désormais vous contacter directement.',
+            route('messages.index', $conversation),
             'success'
         );
 
@@ -67,11 +70,28 @@ class TutorModerationController extends Controller
         return back()->with('success', 'Tuteur suspendu.');
     }
 
+    public function message(Request $request, User $tutor): RedirectResponse
+    {
+        $this->ensureAdmin($request);
+        abort_unless($tutor->role === 'tuteur' && $tutor->status === 'actif', 404);
+
+        return redirect()->route('messages.index', $this->directConversation($request, $tutor));
+    }
+
     public function downloadDocument(Request $request, TutorDocument $document): StreamedResponse
     {
         $this->ensureAdmin($request);
 
         return Storage::disk('public')->download($document->path, $document->original_name);
+    }
+
+    private function directConversation(Request $request, User $tutor): Conversation
+    {
+        return Conversation::query()->firstOrCreate([
+            'booking_id' => null,
+            'student_id' => $request->user()->id,
+            'tutor_id' => $tutor->id,
+        ]);
     }
 
     private function ensureAdmin(Request $request): void
