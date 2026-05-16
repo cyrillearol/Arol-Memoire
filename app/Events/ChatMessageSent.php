@@ -33,6 +33,7 @@ class ChatMessageSent implements ShouldBroadcastNow
         return [
             'message' => [
                 'id' => $this->message->id,
+                'conversation_id' => $this->message->conversation_id,
                 'body' => $this->message->body,
                 'attachment_url' => $this->message->attachment_path ? Storage::url($this->message->attachment_path) : null,
                 'sender_id' => $this->message->sender_id,

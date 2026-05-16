@@ -1,6 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 
 defineProps({
     requests: { type: Object, required: true },
@@ -8,6 +8,11 @@ defineProps({
 });
 
 const money = (value) => `${new Intl.NumberFormat('fr-FR').format(value || 0)} FCFA`;
+const patchWithConfirmation = (url, message) => {
+    if (window.confirm(message)) {
+        router.patch(url, {}, { preserveScroll: true });
+    }
+};
 </script>
 
 <template>
@@ -31,8 +36,8 @@ const money = (value) => `${new Intl.NumberFormat('fr-FR').format(value || 0)} F
                         </div>
                         <div class="flex flex-wrap gap-2">
                             <Link :href="route('bookings.show', booking.id)" class="tl-button-secondary px-4 py-2 text-xs">Détails</Link>
-                            <Link :href="route('bookings.refuse', booking.id)" method="patch" as="button" class="tl-button-secondary px-4 py-2 text-xs">Refuser</Link>
-                            <Link :href="route('bookings.accept', booking.id)" method="patch" as="button" class="tl-button-primary px-4 py-2 text-xs">Accepter</Link>
+                            <button type="button" class="tl-button-secondary px-4 py-2 text-xs" @click="patchWithConfirmation(route('bookings.refuse', booking.id), 'Refuser cette demande de réservation ?')">Refuser</button>
+                            <button type="button" class="tl-button-primary px-4 py-2 text-xs" @click="patchWithConfirmation(route('bookings.accept', booking.id), 'Accepter cette demande de réservation ?')">Accepter</button>
                         </div>
                     </div>
                 </article>

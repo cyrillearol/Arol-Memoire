@@ -1,9 +1,14 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 
 defineProps({ users: { type: Object, required: true }, filters: { type: Object, default: () => ({}) } });
 const money = (value) => value === null ? '-' : `${new Intl.NumberFormat('fr-FR').format(value || 0)} FCFA`;
+const patchWithConfirmation = (url, message) => {
+    if (window.confirm(message)) {
+        router.patch(url, {}, { preserveScroll: true });
+    }
+};
 </script>
 
 <template>
@@ -22,8 +27,8 @@ const money = (value) => value === null ? '-' : `${new Intl.NumberFormat('fr-FR'
             </div>
         </div>
 
-        <div v-if="users.data.length" class="mt-8 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-tutor">
-            <table class="min-w-full text-left text-sm">
+        <div v-if="users.data.length" class="mt-8 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-tutor">
+            <table class="min-w-[760px] text-left text-sm">
                 <thead class="bg-slate-100 text-xs font-bold uppercase tracking-wide text-slate-500">
                     <tr>
                         <th class="px-5 py-4">Tuteur</th>
@@ -39,12 +44,14 @@ const money = (value) => value === null ? '-' : `${new Intl.NumberFormat('fr-FR'
                         <td class="px-5 py-4"><p>{{ user.domain || '-' }}</p><p class="text-xs text-slate-500">{{ money(user.hourly_rate) }}/h</p></td>
                         <td class="px-5 py-4"><span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold">{{ user.status }}</span></td>
                         <td class="px-5 py-4"><a v-for="doc in user.documents" :key="doc.id" :href="route('admin.tutor-documents.download', doc.id)" class="mr-2 rounded bg-slate-100 px-2 py-1 text-xs font-bold text-tutor-navy">Doc</a></td>
-                        <td class="px-5 py-4"><div class="flex flex-wrap gap-2">
-                            <Link :href="route('admin.users.show', user.id)" class="tl-button-secondary px-3 py-2 text-xs">Détails</Link>
-                            <Link v-if="user.status !== 'actif'" :href="route('admin.tutors.accept', user.id)" method="patch" as="button" class="rounded-lg bg-emerald-100 px-3 py-2 text-xs font-bold text-emerald-700">Valider</Link>
-                            <Link v-if="user.status === 'en_attente'" :href="route('admin.tutors.reject', user.id)" method="patch" as="button" class="rounded-lg bg-red-100 px-3 py-2 text-xs font-bold text-red-700">Refuser</Link>
-                            <Link v-if="user.status !== 'suspendu'" :href="route('admin.tutors.suspend', user.id)" method="patch" as="button" class="rounded-lg bg-amber-100 px-3 py-2 text-xs font-bold text-amber-700">Suspendre</Link>
-                        </div></td>
+                        <td class="px-5 py-4">
+                            <div class="flex flex-wrap gap-2">
+                                <Link :href="route('admin.users.show', user.id)" class="tl-button-secondary px-3 py-2 text-xs">Détails</Link>
+                                <button v-if="user.status !== 'actif'" type="button" class="rounded-lg bg-emerald-100 px-3 py-2 text-xs font-bold text-emerald-700" @click="patchWithConfirmation(route('admin.tutors.accept', user.id), `Valider le profil tuteur de ${user.name} ?`)">Valider</button>
+                                <button v-if="user.status === 'en_attente'" type="button" class="rounded-lg bg-red-100 px-3 py-2 text-xs font-bold text-red-700" @click="patchWithConfirmation(route('admin.tutors.reject', user.id), `Refuser la candidature de ${user.name} ?`)">Refuser</button>
+                                <button v-if="user.status !== 'suspendu'" type="button" class="rounded-lg bg-amber-100 px-3 py-2 text-xs font-bold text-amber-700" @click="patchWithConfirmation(route('admin.tutors.suspend', user.id), `Suspendre le profil tuteur de ${user.name} ?`)">Suspendre</button>
+                            </div>
+                        </td>
                     </tr>
                 </tbody>
             </table>

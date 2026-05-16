@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -28,12 +28,13 @@ const submit = () => form.post(route('password.store'), { onFinish: () => form.r
             </div>
             <div class="mt-5">
                 <InputLabel for="password" value="Nouveau mot de passe" />
-                <TextInput id="password" type="password" class="mt-2" v-model="form.password" required autocomplete="new-password" />
+                <TextInput id="password" type="password" maxlength="15" class="mt-2" v-model="form.password" required autocomplete="new-password" />
+                <p class="mt-2 text-xs text-slate-500">Entre 8 et 15 caractères.</p>
                 <InputError class="mt-2" :message="form.errors.password" />
             </div>
             <div class="mt-5">
                 <InputLabel for="password_confirmation" value="Confirmer le mot de passe" />
-                <TextInput id="password_confirmation" type="password" class="mt-2" v-model="form.password_confirmation" required autocomplete="new-password" />
+                <TextInput id="password_confirmation" type="password" maxlength="15" class="mt-2" v-model="form.password_confirmation" required autocomplete="new-password" />
                 <InputError class="mt-2" :message="form.errors.password_confirmation" />
             </div>
             <PrimaryButton class="mt-6 w-full" :disabled="form.processing">Enregistrer</PrimaryButton>

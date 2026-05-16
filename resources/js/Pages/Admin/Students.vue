@@ -1,8 +1,14 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 
 defineProps({ users: { type: Object, required: true } });
+
+const patchWithConfirmation = (url, message) => {
+    if (window.confirm(message)) {
+        router.patch(url, {}, { preserveScroll: true });
+    }
+};
 </script>
 
 <template>
@@ -26,8 +32,8 @@ defineProps({ users: { type: Object, required: true } });
                 </div>
                 <div class="mt-5 flex flex-wrap gap-2">
                     <Link :href="route('admin.users.show', user.id)" class="tl-button-secondary px-4 py-2 text-xs">Détails</Link>
-                    <Link v-if="user.status !== 'suspendu'" :href="route('admin.users.suspend', user.id)" method="patch" as="button" class="rounded-lg border border-red-200 px-4 py-2 text-xs font-bold text-red-600">Suspendre</Link>
-                    <Link v-else :href="route('admin.users.activate', user.id)" method="patch" as="button" class="rounded-lg bg-emerald-100 px-4 py-2 text-xs font-bold text-emerald-700">Réactiver</Link>
+                    <button v-if="user.status !== 'suspendu'" type="button" class="rounded-lg border border-red-200 px-4 py-2 text-xs font-bold text-red-600" @click="patchWithConfirmation(route('admin.users.suspend', user.id), `Suspendre le compte de ${user.name} ?`)">Suspendre</button>
+                    <button v-else type="button" class="rounded-lg bg-emerald-100 px-4 py-2 text-xs font-bold text-emerald-700" @click="patchWithConfirmation(route('admin.users.activate', user.id), `Réactiver le compte de ${user.name} ?`)">Réactiver</button>
                 </div>
             </article>
         </div>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\ConversationCallSignal;
 use App\Models\Conversation;
 use App\Support\PlatformNotifier;
+use App\Support\RealtimeBroadcaster;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
@@ -44,13 +45,13 @@ class CallSignalController extends Controller
             );
         }
 
-        broadcast(new ConversationCallSignal(
+        RealtimeBroadcaster::send(new ConversationCallSignal(
             conversationId: $conversation->id,
             senderId: $user->id,
             type: $validated['type'],
             mode: $validated['mode'] ?? null,
             payload: $validated['payload'] ?? [],
-        ))->toOthers();
+        ), true);
 
         return response()->noContent();
     }

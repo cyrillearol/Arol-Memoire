@@ -48,6 +48,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/tuteur/evaluations', [TutorWorkspaceController::class, 'reviews'])->name('tutor.reviews');
 
     Route::post('/disponibilites', [AvailabilityController::class, 'store'])->name('availabilities.store');
+    Route::patch('/disponibilites/{availability}', [AvailabilityController::class, 'update'])->name('availabilities.update');
     Route::delete('/disponibilites/{availability}', [AvailabilityController::class, 'destroy'])->name('availabilities.destroy');
 
     Route::get('/messages/{conversation?}', [MessageController::class, 'index'])->name('messages.index');

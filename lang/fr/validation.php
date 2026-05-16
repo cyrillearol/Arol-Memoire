@@ -156,6 +156,9 @@ return [
     'uuid' => 'Le champ :attribute doit être un UUID valide.',
 
     'custom' => [
+        'password' => [
+            'max' => 'Le mot de passe ne doit pas dépasser 15 caractères.',
+        ],
         'domain' => [
             'required_if' => 'Indiquez votre domaine de compétence.',
         ],

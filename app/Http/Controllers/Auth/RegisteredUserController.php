@@ -17,17 +17,12 @@ use Inertia\Response;
 
 class RegisteredUserController extends Controller
 {
-    /**
-     * Display the registration view.
-     */
     public function create(): Response
     {
         return Inertia::render('Auth/Register');
     }
 
     /**
-     * Handle an incoming registration request.
-     *
      * @throws ValidationException
      */
     public function store(Request $request): RedirectResponse
@@ -36,13 +31,16 @@ class RegisteredUserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
             'role' => 'required|string|in:etudiant,tuteur',
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'password' => ['required', 'confirmed', Rules\Password::defaults(), 'max:15'],
             'domain' => 'required_if:role,tuteur|nullable|string|max:255',
             'subjects' => 'required_if:role,tuteur|nullable|string|max:1000',
             'hourly_rate' => 'required_if:role,tuteur|nullable|numeric|min:0|max:999999.99',
             'bio' => 'required_if:role,tuteur|nullable|string|min:30|max:2000',
             'documents' => 'required_if:role,tuteur|nullable|array|min:1|max:5',
             'documents.*' => 'file|mimes:pdf,jpg,jpeg,png,doc,docx|max:5120',
+        ], [
+            'bio.min' => 'La présentation professionnelle doit contenir au moins 30 caractères.',
+            'documents.required_if' => 'Ajoutez au moins un document justificatif pour la candidature tuteur.',
         ]);
 
         $user = DB::transaction(function () use ($request) {

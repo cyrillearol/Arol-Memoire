@@ -52,7 +52,7 @@ const submit = () => {
                     <InputLabel for="password" value="Mot de passe" />
                     <Link v-if="canResetPassword" :href="route('password.request')" class="text-xs font-semibold text-[#9a6200] hover:text-tutor-navy">Mot de passe oublié?</Link>
                 </div>
-                <TextInput id="password" type="password" class="mt-2" v-model="form.password" required autocomplete="current-password" placeholder="••••••••" />
+                <TextInput id="password" type="password" maxlength="15" class="mt-2" v-model="form.password" required autocomplete="current-password" placeholder="••••••••" />
                 <InputError class="mt-2" :message="form.errors.password" />
             </div>
 

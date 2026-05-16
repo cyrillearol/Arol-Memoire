@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import PublicFooter from '@/Components/PublicFooter.vue';
 import PublicHeader from '@/Components/PublicHeader.vue';
 import { Head, Link } from '@inertiajs/vue3';
@@ -40,10 +40,10 @@ const money = (value) => `${new Intl.NumberFormat('fr-FR').format(value || 0)} F
     <main class="min-h-screen bg-tutor-surface">
         <PublicHeader active="tutors" />
 
-        <section class="mx-auto grid max-w-7xl gap-8 px-5 py-12 sm:px-8 lg:grid-cols-[340px_1fr]">
-            <aside class="tl-card h-fit p-8 text-center">
-                <div class="mx-auto grid size-36 place-items-center rounded-full bg-tutor-navy text-5xl font-bold text-white ring-8 ring-[#d5e3ff]">{{ tutor.name.charAt(0) }}</div>
-                <h1 class="mt-6 text-3xl font-bold">{{ tutor.name }}</h1>
+        <section class="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-8 lg:grid-cols-[340px_1fr] lg:py-12">
+            <aside class="tl-card h-fit p-5 text-center sm:p-8">
+                <div class="mx-auto grid size-28 place-items-center rounded-full bg-tutor-navy text-4xl font-bold text-white ring-8 ring-[#d5e3ff] sm:size-36 sm:text-5xl">{{ tutor.name.charAt(0) }}</div>
+                <h1 class="mt-6 break-words text-2xl font-bold sm:text-3xl">{{ tutor.name }}</h1>
                 <p class="mt-1 text-sm text-slate-600">{{ tutor.domain }}</p>
                 <p class="mt-4 font-bold text-[#9a6200]">★ {{ tutor.rating || 'N/A' }} <span class="font-normal text-slate-500">({{ tutor.reviews_count }} avis)</span></p>
                 <div class="mt-6 flex flex-wrap justify-center gap-2">
@@ -58,12 +58,12 @@ const money = (value) => `${new Intl.NumberFormat('fr-FR').format(value || 0)} F
 
             <div class="space-y-10">
                 <section>
-                    <h2 class="text-3xl font-bold">À propos</h2>
+                    <h2 class="text-2xl font-bold sm:text-3xl">À propos</h2>
                     <p class="mt-5 max-w-4xl text-lg leading-8 text-slate-700">{{ tutor.bio || 'Ce tuteur n’a pas encore ajouté de présentation détaillée.' }}</p>
                 </section>
 
                 <section>
-                    <h2 class="text-3xl font-bold">Compétences</h2>
+                    <h2 class="text-2xl font-bold sm:text-3xl">Compétences</h2>
                     <div class="mt-6 grid gap-5 md:grid-cols-2">
                         <div v-for="(subject, index) in tutor.subjects" :key="subject">
                             <div class="flex justify-between text-sm font-bold text-tutor-navy"><span>{{ subject }}</span><span>{{ 95 - index * 3 }}%</span></div>
@@ -73,9 +73,9 @@ const money = (value) => `${new Intl.NumberFormat('fr-FR').format(value || 0)} F
                 </section>
 
                 <section>
-                    <h2 class="text-3xl font-bold">Disponibilités</h2>
-                    <div class="mt-6 overflow-hidden rounded-lg border border-slate-200 bg-white">
-                        <table class="min-w-full text-center text-sm">
+                    <h2 class="text-2xl font-bold sm:text-3xl">Disponibilités</h2>
+                    <div class="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                        <table class="min-w-[620px] text-center text-sm">
                             <thead class="bg-slate-100 font-bold text-tutor-navy">
                                 <tr>
                                     <th class="border-r border-slate-200 px-4 py-4">H/J</th>
@@ -97,8 +97,8 @@ const money = (value) => `${new Intl.NumberFormat('fr-FR').format(value || 0)} F
                 </section>
 
                 <section>
-                    <div class="flex items-center justify-between">
-                        <h2 class="text-3xl font-bold">Avis des étudiants</h2>
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <h2 class="text-2xl font-bold sm:text-3xl">Avis des étudiants</h2>
                         <span class="text-sm font-bold text-tutor-navy">Voir tout →</span>
                     </div>
                     <div v-if="reviews.length" class="mt-6 space-y-4">

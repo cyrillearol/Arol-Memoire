@@ -6,6 +6,8 @@ use App\Events\ChatMessageSent;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Support\PlatformNotifier;
+use App\Support\RealtimeBroadcaster;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -49,7 +51,7 @@ class MessageController extends Controller
         ]);
     }
 
-    public function store(Request $request, Conversation $conversation): RedirectResponse
+    public function store(Request $request, Conversation $conversation): RedirectResponse|JsonResponse
     {
         $user = $request->user();
         $this->ensureParticipant($conversation, $user->id);
@@ -73,7 +75,7 @@ class MessageController extends Controller
             'attachment_path' => $path,
         ]);
 
-        broadcast(new ChatMessageSent($message))->toOthers();
+        RealtimeBroadcaster::send(new ChatMessageSent($message), true);
 
         $conversation->touch();
 
@@ -85,6 +87,12 @@ class MessageController extends Controller
             route('messages.index', $conversation),
             'info'
         );
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $this->messageResource($message->loadMissing('sender'), $user->id),
+            ]);
+        }
 
         return redirect()->route('messages.index', $conversation)->with('success', 'Message envoyé.');
     }
@@ -117,16 +125,25 @@ class MessageController extends Controller
             ] : null,
             'last_message' => $lastMessage?->body,
             'last_message_at' => $lastMessage?->created_at?->diffForHumans(),
-            'messages' => $withMessages ? $conversation->messages->sortBy('created_at')->values()->map(fn (Message $message) => [
-                'id' => $message->id,
-                'body' => $message->body,
-                'attachment_url' => $message->attachment_path ? Storage::url($message->attachment_path) : null,
-                'sender_id' => $message->sender_id,
-                'sender_name' => $message->sender?->name,
-                'is_mine' => $message->sender_id === $viewerId,
-                'created_at' => $message->created_at?->format('H:i'),
-                'read_at' => $message->read_at?->toIso8601String(),
-            ]) : [],
+            'messages' => $withMessages ? $conversation->messages
+                ->sortBy('created_at')
+                ->values()
+                ->map(fn (Message $message) => $this->messageResource($message, $viewerId)) : [],
+        ];
+    }
+
+    private function messageResource(Message $message, int $viewerId): array
+    {
+        return [
+            'id' => $message->id,
+            'conversation_id' => $message->conversation_id,
+            'body' => $message->body,
+            'attachment_url' => $message->attachment_path ? Storage::url($message->attachment_path) : null,
+            'sender_id' => $message->sender_id,
+            'sender_name' => $message->sender?->name,
+            'is_mine' => $message->sender_id === $viewerId,
+            'created_at' => $message->created_at?->format('H:i'),
+            'read_at' => $message->read_at?->toIso8601String(),
         ];
     }
 }

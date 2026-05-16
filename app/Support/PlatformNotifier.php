@@ -34,7 +34,7 @@ class PlatformNotifier
             'updated_at' => now(),
         ]);
 
-        broadcast(new PlatformNotificationSent($user->id, [
+        RealtimeBroadcaster::send(new PlatformNotificationSent($user->id, [
             'id' => $id,
             ...$payload,
             'read_at' => null,

@@ -1,6 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 
 const props = defineProps({
     booking: { type: Object, required: true },
@@ -12,6 +12,11 @@ const labels = { en_attente: 'En attente', acceptee: 'Confirmée', refusee: 'Ref
 const money = (value) => `${new Intl.NumberFormat('fr-FR').format(value || 0)} FCFA`;
 
 const submitReview = () => reviewForm.post(route('reviews.store', props.booking.id), { preserveScroll: true });
+const cancelBooking = () => {
+    if (window.confirm('Annuler cette réservation ? Cette action informera l’autre utilisateur.')) {
+        router.patch(route('bookings.cancel', props.booking.id), {}, { preserveScroll: true });
+    }
+};
 </script>
 
 <template>
@@ -58,7 +63,11 @@ const submitReview = () => reviewForm.post(route('reviews.store', props.booking.
                         <select v-model="reviewForm.rating" class="tl-input w-full px-4 py-3 md:w-48">
                             <option v-for="rating in [5,4,3,2,1]" :key="rating" :value="rating">{{ rating }} étoile(s)</option>
                         </select>
-                        <textarea v-model="reviewForm.comment" class="tl-input w-full px-4 py-3" rows="4" placeholder="Votre avis sur la séance..."></textarea>
+                        <textarea v-model="reviewForm.comment" maxlength="2000" class="tl-input w-full px-4 py-3" rows="4" placeholder="Votre avis sur la séance..."></textarea>
+                        <div class="flex items-center justify-between text-xs text-slate-500">
+                            <span>Décrivez ce qui a été utile pendant la séance.</span>
+                            <span>{{ reviewForm.comment.length }}/2000 caractères</span>
+                        </div>
                         <button class="tl-button-primary" :disabled="reviewForm.processing">Enregistrer l’avis</button>
                     </form>
                 </div>
@@ -69,7 +78,7 @@ const submitReview = () => reviewForm.post(route('reviews.store', props.booking.
                     <h2 class="text-2xl font-bold">Actions</h2>
                     <div class="mt-5 grid gap-3">
                         <Link v-if="booking.conversation_id" :href="route('messages.index', booking.conversation_id)" class="tl-button-primary w-full">Ouvrir la messagerie</Link>
-                        <Link v-if="['en_attente', 'acceptee'].includes(booking.status)" :href="route('bookings.cancel', booking.id)" method="patch" as="button" class="rounded-lg border border-red-200 px-5 py-3 text-sm font-bold text-red-600 hover:bg-red-50">Annuler la réservation</Link>
+                        <button v-if="['en_attente', 'acceptee'].includes(booking.status)" type="button" class="rounded-lg border border-red-200 px-5 py-3 text-sm font-bold text-red-600 hover:bg-red-50" @click="cancelBooking">Annuler la réservation</button>
                         <Link :href="viewerRole === 'tuteur' ? route('tutor.requests') : route('bookings.index')" class="tl-button-secondary w-full">Retour</Link>
                     </div>
                 </div>

@@ -24,6 +24,7 @@ const durations = [60, 90, 120];
 const slots = computed(() => props.availableSlots || []);
 const firstSlotFor = (duration) => slots.value.find((slot) => slot.available_durations?.includes(Number(duration)));
 const paymentError = ref('');
+const paymentStatus = ref('');
 const kkiapayReady = ref(false);
 
 const form = useForm({
@@ -42,6 +43,12 @@ const isKkiapaySandbox = computed(() => [true, 1, '1', 'true'].includes(props.pa
 const money = (value) => `${new Intl.NumberFormat('fr-FR').format(value || 0)} FCFA`;
 const filteredSlots = computed(() => slots.value.filter((slot) => slot.available_durations?.includes(Number(form.duration_minutes))));
 const selectedSlot = computed(() => slots.value.find((slot) => slot.scheduled_at === form.scheduled_at));
+const notesLength = computed(() => form.notes.length);
+const buttonLabel = computed(() => {
+    if (form.processing) return 'Validation du paiement...';
+    if (paymentStatus.value) return paymentStatus.value;
+    return 'Payer avec Kkiapay';
+});
 const groupedSlots = computed(() => {
     const groups = [];
 
@@ -107,7 +114,9 @@ const transactionIdFrom = (response) => response?.transactionId
     || response?.paymentReference;
 
 const submit = () => {
-    if (!form.scheduled_at) return;
+    if (!form.scheduled_at || !form.kkiapay_transaction_id) return;
+
+    paymentStatus.value = 'Validation du paiement...';
 
     form.transform((data) => ({
         subject: data.subject,
@@ -116,11 +125,22 @@ const submit = () => {
         notes: data.notes,
         payment_method: data.payment_method,
         kkiapay_transaction_id: data.kkiapay_transaction_id,
-    })).post(route('bookings.store', props.tutor.id));
+    })).post(route('bookings.store', props.tutor.id), {
+        preserveScroll: true,
+        onError: () => {
+            paymentStatus.value = '';
+        },
+        onFinish: () => {
+            if (Object.keys(form.errors).length) {
+                paymentStatus.value = '';
+            }
+        },
+    });
 };
 
 const startKkiapayPayment = async () => {
     paymentError.value = '';
+    paymentStatus.value = '';
 
     if (!form.scheduled_at) {
         paymentError.value = 'Choisissez un créneau disponible.';
@@ -133,11 +153,15 @@ const startKkiapayPayment = async () => {
     }
 
     try {
+        paymentStatus.value = 'Chargement du paiement...';
         await loadKkiapayScript();
     } catch (error) {
+        paymentStatus.value = '';
         paymentError.value = 'Impossible de charger Kkiapay. Vérifiez votre connexion.';
         return;
     }
+
+    paymentStatus.value = '';
 
     window.openKkiapayWidget({
         amount: total.value,
@@ -169,15 +193,19 @@ onMounted(async () => {
         const transactionId = transactionIdFrom(response);
 
         if (!transactionId) {
+            paymentStatus.value = '';
             paymentError.value = 'Transaction Kkiapay sans référence. Réessayez.';
             return;
         }
 
+        paymentError.value = '';
+        paymentStatus.value = 'Paiement reçu, finalisation...';
         form.kkiapay_transaction_id = transactionId;
         submit();
     });
 
     window.addFailedListener?.(() => {
+        paymentStatus.value = '';
         paymentError.value = 'Le paiement Kkiapay a échoué.';
     });
 });
@@ -260,7 +288,11 @@ onMounted(async () => {
                             </div>
                             <div>
                                 <label class="text-sm font-bold uppercase tracking-wide text-slate-500">Besoins pour la séance</label>
-                                <textarea v-model="form.notes" class="tl-input mt-2 w-full px-4 py-3" rows="5" placeholder="Décrivez les sujets que vous souhaitez aborder..."></textarea>
+                                <textarea v-model="form.notes" maxlength="2000" class="tl-input mt-2 w-full px-4 py-3" rows="5" placeholder="Décrivez les sujets que vous souhaitez aborder..."></textarea>
+                                <div class="mt-2 flex items-center justify-between text-xs text-slate-500">
+                                    <span>Décrivez vos attentes si nécessaire.</span>
+                                    <span>{{ notesLength }}/2000 caractères</span>
+                                </div>
                             </div>
                         </div>
                     </section>
@@ -272,6 +304,7 @@ onMounted(async () => {
                                 <p class="font-bold text-tutor-navy">Mobile Money et carte bancaire</p>
                                 <p class="mt-2 text-sm text-slate-600">Le paiement est vérifié avant l’envoi de la demande au tuteur.</p>
                             </div>
+                            <p v-if="paymentStatus" class="mt-4 text-sm font-semibold text-tutor-navy">{{ paymentStatus }}</p>
                             <p v-if="paymentError || form.errors.payment || form.errors.kkiapay_transaction_id" class="mt-4 text-sm font-semibold text-red-600">
                                 {{ paymentError || form.errors.payment || form.errors.kkiapay_transaction_id }}
                             </p>
@@ -282,10 +315,10 @@ onMounted(async () => {
                             <div class="mt-5 space-y-3 text-sm">
                                 <div class="flex justify-between"><span>Cours</span><span class="font-bold">{{ money(amount) }}</span></div>
                                 <div class="flex justify-between"><span>Frais de service</span><span class="font-bold">{{ money(fees) }}</span></div>
-                                <div class="border-t border-slate-200 pt-3 flex justify-between text-lg font-bold text-tutor-navy"><span>Total</span><span>{{ money(total) }}</span></div>
+                                <div class="flex justify-between border-t border-slate-200 pt-3 text-lg font-bold text-tutor-navy"><span>Total</span><span>{{ money(total) }}</span></div>
                             </div>
-                            <button type="button" class="tl-button-primary mt-6 w-full" :disabled="form.processing || !form.scheduled_at" @click="startKkiapayPayment">
-                                {{ form.processing ? 'Vérification...' : 'Payer avec Kkiapay' }}
+                            <button type="button" class="tl-button-primary mt-6 w-full" :disabled="form.processing || !form.scheduled_at || Boolean(paymentStatus)" @click="startKkiapayPayment">
+                                {{ buttonLabel }}
                             </button>
                             <p class="mt-4 text-center text-xs leading-5 text-slate-500">Transaction enregistrée et associée à votre réservation.</p>
                         </div>

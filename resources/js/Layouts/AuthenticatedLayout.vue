@@ -1,14 +1,37 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { Link, usePage } from '@inertiajs/vue3';
-import { Bell, Grid2X2, Search, CalendarDays, Mail, History, UserRound, Settings, Star, ClipboardList, AlertCircle, GraduationCap } from 'lucide-vue-next';
+import { Link, useForm, usePage } from '@inertiajs/vue3';
+import {
+    AlertCircle,
+    Bell,
+    CalendarDays,
+    ClipboardList,
+    GraduationCap,
+    Grid2X2,
+    History,
+    Mail,
+    Menu,
+    Search,
+    Settings,
+    Star,
+    UserRound,
+    X,
+} from 'lucide-vue-next';
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
 const isAdmin = computed(() => user.value?.role === 'admin');
 const notifications = computed(() => page.props.notifications || { unread_count: 0, recent: [] });
 const liveUnreadCount = ref(0);
+const mobileMenuOpen = ref(false);
+const reportModalOpen = ref(false);
+const liveNotice = ref(null);
 const unreadNotificationsCount = computed(() => liveUnreadCount.value);
+
+const reportForm = useForm({
+    subject: '',
+    description: '',
+});
 
 watch(
     notifications,
@@ -18,13 +41,26 @@ watch(
     { immediate: true },
 );
 
+const showLiveNotice = (notification) => {
+    if (!notification?.title) return;
+
+    liveNotice.value = notification;
+
+    window.setTimeout(() => {
+        if (liveNotice.value?.id === notification.id) {
+            liveNotice.value = null;
+        }
+    }, 8000);
+};
+
 onMounted(() => {
     if (!window.Echo || !user.value?.id) {
         return;
     }
 
-    window.Echo.private(`users.${user.value.id}`).listen('.notification.created', () => {
+    window.Echo.private(`users.${user.value.id}`).listen('.notification.created', (event) => {
         liveUnreadCount.value += 1;
+        showLiveNotice(event.notification);
     });
 });
 
@@ -33,6 +69,7 @@ onBeforeUnmount(() => {
         window.Echo.leave(`users.${user.value.id}`);
     }
 });
+
 const iconMap = {
     dashboard: Grid2X2,
     tutors: Search,
@@ -94,6 +131,24 @@ const navItems = computed(() => {
 const initials = computed(() => (user.value?.name || 'U').split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase());
 
 const isNavActive = (item) => (item.activeRoutes || [item.routeName]).some((routeName) => route().current(routeName));
+
+const closeReportModal = () => {
+    reportModalOpen.value = false;
+    reportForm.reset();
+    reportForm.clearErrors();
+};
+
+const submitReport = () => {
+    reportForm.post(route('reports.store'), {
+        preserveScroll: true,
+        onSuccess: closeReportModal,
+    });
+};
+
+const openReportModal = () => {
+    mobileMenuOpen.value = false;
+    reportModalOpen.value = true;
+};
 </script>
 
 <template>
@@ -116,14 +171,14 @@ const isNavActive = (item) => (item.activeRoutes || [item.routeName]).some((rout
                     <span v-if="unreadNotificationsCount" class="absolute right-2 top-2 size-2.5 rounded-full bg-red-500 ring-2" :class="isAdmin ? 'ring-tutor-navy' : 'ring-white'"></span>
                 </Link>
             </div>
-            <p v-if="isAdmin" class="mt-1 text-xs uppercase tracking-wide text-white/35">Admin console</p>
+            <p v-if="isAdmin" class="mt-1 text-xs uppercase tracking-wide text-white/35">Console admin</p>
 
             <div v-if="user?.role === 'tuteur'" class="mt-10 rounded-lg p-4 text-center" :class="isAdmin ? 'bg-white/10' : 'bg-slate-50'">
                 <div class="mx-auto grid size-16 place-items-center rounded-full bg-tutor-navy text-lg font-bold text-white ring-4 ring-slate-200/70">
                     {{ initials }}
                 </div>
                 <p class="mt-3 text-sm font-bold">{{ user.name }}</p>
-                <p class="text-xs" :class="isAdmin ? 'text-white/50' : 'text-slate-500'">Statut: {{ user.status }}</p>
+                <p class="text-xs" :class="isAdmin ? 'text-white/50' : 'text-slate-500'">Statut : {{ user.status }}</p>
             </div>
 
             <nav class="mt-10 space-y-2">
@@ -134,7 +189,7 @@ const isNavActive = (item) => (item.activeRoutes || [item.routeName]).some((rout
                     class="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-bold transition"
                     :class="isNavActive(item)
                         ? 'bg-tutor-gold text-tutor-navy shadow-tutor'
-                        : (isAdmin ? 'text-white/52 hover:bg-white/10 hover:text-white' : 'text-slate-700 hover:bg-tutor-gold/15 hover:text-tutor-navy')"
+                        : (isAdmin ? 'text-white/70 hover:bg-white/10 hover:text-white' : 'text-slate-700 hover:bg-tutor-gold/15 hover:text-tutor-navy')"
                 >
                     <span class="relative grid size-5 place-items-center">
                         <component :is="iconMap[item.icon]" class="size-5" />
@@ -145,6 +200,16 @@ const isNavActive = (item) => (item.activeRoutes || [item.routeName]).some((rout
             </nav>
 
             <div class="mt-auto rounded-lg p-3" :class="isAdmin ? 'bg-white/10' : 'bg-slate-50'">
+                <button
+                    v-if="!isAdmin"
+                    type="button"
+                    class="mb-3 flex w-full items-center justify-center gap-2 rounded-md border px-3 py-2 text-xs font-bold"
+                    :class="isAdmin ? 'border-white/15 text-white/70' : 'border-slate-200 text-slate-600 hover:border-tutor-gold hover:text-tutor-navy'"
+                    @click="openReportModal"
+                >
+                    <AlertCircle class="size-4" />
+                    Signaler un problème
+                </button>
                 <div class="flex items-center gap-3">
                     <div class="grid size-10 place-items-center rounded-full bg-tutor-gold text-sm font-bold text-tutor-navy">{{ initials }}</div>
                     <div class="min-w-0">
@@ -154,41 +219,69 @@ const isNavActive = (item) => (item.activeRoutes || [item.routeName]).some((rout
                 </div>
                 <div class="mt-4 grid grid-cols-2 gap-2">
                     <Link :href="route('profile.edit')" class="rounded-md border px-3 py-2 text-center text-xs font-bold" :class="isAdmin ? 'border-white/15 text-white/70' : 'border-slate-200 text-slate-600'">Profil</Link>
-                    <Link :href="route('logout')" method="post" as="button" class="rounded-md bg-tutor-gold px-3 py-2 text-xs font-bold text-tutor-navy">Sortir</Link>
+                    <Link :href="route('logout')" method="post" as="button" class="rounded-md bg-tutor-gold px-3 py-2 text-xs font-bold text-tutor-navy">Se déconnecter</Link>
                 </div>
             </div>
         </aside>
 
         <div class="min-w-0 flex-1">
-            <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/92 px-5 py-4 backdrop-blur lg:hidden">
-                <div class="flex items-center justify-between">
+            <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-4 py-4 backdrop-blur lg:hidden">
+                <div class="flex items-center justify-between gap-3">
                     <Link :href="route('home')" class="text-xl font-bold text-tutor-navy"><span class="font-display">Tutor</span><span class="font-display text-[#9a6200]">Link</span></Link>
                     <div class="flex items-center gap-2">
                         <Link
                             :href="route('notifications.index')"
                             class="relative grid size-10 place-items-center rounded-lg border transition"
                             :class="route().current('notifications.index') ? 'border-tutor-gold bg-tutor-gold text-tutor-navy' : 'border-slate-200 text-tutor-navy'"
+                            title="Notifications"
                         >
                             <Bell class="size-5" />
                             <span v-if="unreadNotificationsCount" class="absolute right-2 top-2 size-2.5 rounded-full bg-red-500 ring-2 ring-white"></span>
                         </Link>
-                        <Link :href="route('logout')" method="post" as="button" class="tl-button-primary px-4 py-2">Sortir</Link>
+                        <button type="button" class="grid size-10 place-items-center rounded-lg border border-slate-200 text-tutor-navy" @click="mobileMenuOpen = !mobileMenuOpen">
+                            <X v-if="mobileMenuOpen" class="size-5" />
+                            <Menu v-else class="size-5" />
+                        </button>
                     </div>
                 </div>
-                <nav class="mt-4 flex gap-2 overflow-x-auto pb-1">
-                    <Link
-                        v-for="item in navItems"
-                        :key="item.label"
-                        :href="route(item.routeName)"
-                        class="shrink-0 rounded-lg border px-3 py-2 text-xs font-bold transition"
-                        :class="isNavActive(item) ? 'border-tutor-gold bg-tutor-gold text-tutor-navy' : 'border-slate-200 bg-white text-tutor-navy'"
-                    >
-                        {{ item.label }}
-                    </Link>
-                </nav>
+
+                <div v-if="mobileMenuOpen" class="mt-4 rounded-lg border border-slate-200 bg-white p-3 shadow-tutor">
+                    <nav class="grid gap-2">
+                        <Link
+                            v-for="item in navItems"
+                            :key="item.label"
+                            :href="route(item.routeName)"
+                            class="flex items-center gap-3 rounded-lg border px-3 py-3 text-sm font-bold transition"
+                            :class="isNavActive(item) ? 'border-tutor-gold bg-tutor-gold text-tutor-navy' : 'border-slate-200 bg-white text-tutor-navy'"
+                            @click="mobileMenuOpen = false"
+                        >
+                            <span class="relative grid size-5 place-items-center">
+                                <component :is="iconMap[item.icon]" class="size-5" />
+                                <span v-if="item.icon === 'notifications' && unreadNotificationsCount" class="absolute -right-1 -top-1 size-2 rounded-full bg-red-500"></span>
+                            </span>
+                            {{ item.label }}
+                        </Link>
+                    </nav>
+                    <div class="mt-3 grid gap-2 border-t border-slate-100 pt-3">
+                        <button v-if="!isAdmin" type="button" class="flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-3 text-sm font-bold text-slate-700" @click="openReportModal">
+                            <AlertCircle class="size-4" />
+                            Signaler un problème
+                        </button>
+                        <Link :href="route('logout')" method="post" as="button" class="rounded-lg bg-tutor-navy px-3 py-3 text-sm font-bold text-white">
+                            Se déconnecter
+                        </Link>
+                    </div>
+                </div>
             </header>
 
-            <main class="px-5 py-8 sm:px-8 lg:px-10">
+            <main class="px-4 py-6 sm:px-8 lg:px-10 lg:py-8">
+                <div v-if="liveNotice" class="mb-6 flex items-start justify-between gap-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    <div>
+                        <p class="font-bold">{{ liveNotice.title }}</p>
+                        <p class="mt-1">{{ liveNotice.body }}</p>
+                    </div>
+                    <Link v-if="liveNotice.url" :href="liveNotice.url" class="shrink-0 rounded-md bg-tutor-navy px-3 py-2 text-xs font-bold text-white">Ouvrir</Link>
+                </div>
                 <div v-if="$page.props.flash?.success" class="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
                     {{ $page.props.flash.success }}
                 </div>
@@ -197,6 +290,37 @@ const isNavActive = (item) => (item.activeRoutes || [item.routeName]).some((rout
                 </div>
                 <slot />
             </main>
+        </div>
+
+        <div v-if="reportModalOpen" class="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 px-4 py-6 backdrop-blur-sm">
+            <form class="w-full max-w-lg rounded-lg bg-white p-6 shadow-2xl" @submit.prevent="submitReport">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-wide text-[#9a6200]">Signalement</p>
+                        <h2 class="mt-1 text-2xl font-bold text-tutor-navy">Décrire un problème</h2>
+                    </div>
+                    <button type="button" class="grid size-10 place-items-center rounded-lg border border-slate-200 text-slate-500" @click="closeReportModal">
+                        <X class="size-4" />
+                    </button>
+                </div>
+
+                <label class="mt-6 block text-sm font-bold text-slate-700" for="report-subject">Sujet</label>
+                <input id="report-subject" v-model="reportForm.subject" maxlength="255" class="tl-input mt-2 w-full px-4 py-3" required placeholder="Exemple : problème de réservation" />
+                <p v-if="reportForm.errors.subject" class="mt-2 text-sm text-red-600">{{ reportForm.errors.subject }}</p>
+
+                <label class="mt-5 block text-sm font-bold text-slate-700" for="report-description">Description</label>
+                <textarea id="report-description" v-model="reportForm.description" maxlength="3000" rows="5" class="tl-input mt-2 w-full px-4 py-3" required placeholder="Expliquez clairement ce qui s’est passé."></textarea>
+                <div class="mt-2 flex items-center justify-between text-xs text-slate-500">
+                    <span>Minimum conseillé : 20 mots.</span>
+                    <span>{{ reportForm.description.length }}/3000 caractères</span>
+                </div>
+                <p v-if="reportForm.errors.description" class="mt-2 text-sm text-red-600">{{ reportForm.errors.description }}</p>
+
+                <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                    <button type="button" class="rounded-lg border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700" @click="closeReportModal">Annuler</button>
+                    <button type="submit" class="tl-button-primary" :disabled="reportForm.processing">Envoyer le signalement</button>
+                </div>
+            </form>
         </div>
     </div>
 </template>

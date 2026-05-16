@@ -1,5 +1,7 @@
-﻿<script setup>
+<script setup>
 import { Link } from '@inertiajs/vue3';
+import { Menu, X } from 'lucide-vue-next';
+import { ref } from 'vue';
 
 defineProps({
     active: {
@@ -7,6 +9,8 @@ defineProps({
         default: 'home',
     },
 });
+
+const mobileOpen = ref(false);
 
 const nav = [
     { id: 'home', label: 'Accueil', href: 'home' },
@@ -36,11 +40,39 @@ const nav = [
                 </component>
             </nav>
 
-            <div class="flex items-center gap-3 text-sm font-bold">
+            <div class="hidden items-center gap-3 text-sm font-bold sm:flex">
                 <Link v-if="$page.props.auth.user" :href="route('dashboard')" class="tl-button-secondary px-4 py-2">Tableau de bord</Link>
                 <template v-else>
-                    <Link :href="route('login')" class="hidden rounded-lg px-4 py-2 text-tutor-navy transition hover:bg-slate-100 sm:inline-flex">Connexion</Link>
+                    <Link :href="route('login')" class="rounded-lg px-4 py-2 text-tutor-navy transition hover:bg-slate-100">Connexion</Link>
                     <Link :href="route('register')" class="tl-button-primary px-4 py-2">S’inscrire</Link>
+                </template>
+            </div>
+
+            <button type="button" class="grid size-10 place-items-center rounded-lg border border-slate-200 text-tutor-navy sm:hidden" @click="mobileOpen = !mobileOpen">
+                <X v-if="mobileOpen" class="size-5" />
+                <Menu v-else class="size-5" />
+            </button>
+        </div>
+
+        <div v-if="mobileOpen" class="border-t border-slate-200 bg-white px-5 py-4 shadow-tutor sm:hidden">
+            <nav class="grid gap-2">
+                <component
+                    :is="item.anchor ? 'a' : Link"
+                    v-for="item in nav"
+                    :key="item.id"
+                    :href="item.anchor || route(item.href)"
+                    class="rounded-lg border px-4 py-3 text-sm font-bold"
+                    :class="active === item.id ? 'border-tutor-gold bg-tutor-gold text-tutor-navy' : 'border-slate-200 text-slate-700'"
+                    @click="mobileOpen = false"
+                >
+                    {{ item.label }}
+                </component>
+            </nav>
+            <div class="mt-3 grid gap-2 border-t border-slate-100 pt-3 text-sm font-bold">
+                <Link v-if="$page.props.auth.user" :href="route('dashboard')" class="tl-button-secondary justify-center px-4 py-3" @click="mobileOpen = false">Tableau de bord</Link>
+                <template v-else>
+                    <Link :href="route('login')" class="rounded-lg border border-slate-200 px-4 py-3 text-center text-tutor-navy" @click="mobileOpen = false">Connexion</Link>
+                    <Link :href="route('register')" class="tl-button-primary justify-center px-4 py-3" @click="mobileOpen = false">S’inscrire</Link>
                 </template>
             </div>
         </div>

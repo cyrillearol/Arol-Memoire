@@ -13,7 +13,9 @@ class ReportController extends Controller
         $validated = $request->validate([
             'reported_user_id' => ['nullable', 'exists:users,id'],
             'subject' => ['required', 'string', 'max:255'],
-            'description' => ['required', 'string', 'max:3000'],
+            'description' => ['required', 'string', 'min:40', 'max:3000'],
+        ], [
+            'description.min' => 'Ajoutez quelques détails pour que l’administration puisse comprendre le problème.',
         ]);
 
         $request->user()->reportsSubmitted()->create([
@@ -25,8 +27,8 @@ class ReportController extends Controller
 
         PlatformNotifier::sendToAdmins(
             'Nouveau signalement',
-            $request->user()->name.' a transmis un signalement: '.$validated['subject'].'.',
-            route('dashboard'),
+            $request->user()->name.' a transmis un signalement : '.$validated['subject'].'.',
+            route('admin.reports.index'),
             'warning'
         );
 

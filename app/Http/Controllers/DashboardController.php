@@ -56,7 +56,10 @@ class DashboardController extends Controller
             'metrics' => [
                 'upcoming' => Booking::where('student_id', $student->id)->whereIn('status', ['en_attente', 'acceptee'])->count(),
                 'completed' => Booking::where('student_id', $student->id)->where('status', 'terminee')->count(),
-                'favoriteTutors' => $recommendedTutors->count(),
+                'favoriteTutors' => Booking::where('student_id', $student->id)
+                    ->whereIn('status', ['en_attente', 'acceptee', 'terminee'])
+                    ->distinct('tutor_id')
+                    ->count('tutor_id'),
                 'unreadMessages' => $this->unreadMessagesFor($student),
             ],
             'upcomingBookings' => $upcoming,

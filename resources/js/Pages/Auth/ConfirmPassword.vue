@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -17,7 +17,7 @@ const submit = () => form.post(route('password.confirm'), { onFinish: () => form
         <p class="mt-3 text-center text-slate-600">Cette action nécessite une vérification supplémentaire.</p>
         <form class="mt-7" @submit.prevent="submit">
             <InputLabel for="password" value="Mot de passe" />
-            <TextInput id="password" type="password" class="mt-2" v-model="form.password" required autocomplete="current-password" autofocus />
+            <TextInput id="password" type="password" maxlength="15" class="mt-2" v-model="form.password" required autocomplete="current-password" autofocus />
             <InputError class="mt-2" :message="form.errors.password" />
             <PrimaryButton class="mt-6 w-full" :disabled="form.processing">Confirmer</PrimaryButton>
         </form>
