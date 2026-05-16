@@ -96,11 +96,20 @@ class CallSignalController extends Controller
             ]);
         }
 
-        $signals = CallSignal::query()
+        $baseQuery = CallSignal::query()
+            ->where('recipient_id', $request->user()->id);
+
+        if ($request->boolean('initial')) {
+            return response()->json([
+                'signals' => [],
+                'latest_id' => max($after, (int) $baseQuery->max('id')),
+            ]);
+        }
+
+        $signals = (clone $baseQuery)
             ->with('sender:id,name')
-            ->where('recipient_id', $request->user()->id)
             ->where('id', '>', $after)
-            ->where('created_at', '>=', now()->subMinutes(3))
+            ->where('created_at', '>=', now()->subMinute())
             ->orderBy('id')
             ->limit(50)
             ->get()

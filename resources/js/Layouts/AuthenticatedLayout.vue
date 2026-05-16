@@ -423,6 +423,21 @@ const declineIncomingCall = () => {
         });
 };
 
+const initializeCallSignalCursor = async () => {
+    if (!user.value?.id) return;
+
+    try {
+        const response = await window.axios.get(route('calls.pending'), {
+            params: { after: latestCallSignalId, initial: true },
+            timeout: 8000,
+        });
+
+        latestCallSignalId = Math.max(latestCallSignalId, Number(response.data?.latest_id || 0));
+    } catch (error) {
+        console.warn('Initialisation des appels entrants impossible', error);
+    }
+};
+
 const pollPendingCallSignals = async () => {
     if (!user.value?.id || route().current('messages.index')) return;
 
@@ -456,8 +471,10 @@ onMounted(() => {
             .listen('.call.signal', handleUserCallSignal);
     }
 
-    void pollPendingCallSignals();
-    callSignalPoller = window.setInterval(pollPendingCallSignals, 2500);
+    void initializeCallSignalCursor().then(() => {
+        void pollPendingCallSignals();
+        callSignalPoller = window.setInterval(pollPendingCallSignals, 2500);
+    });
 });
 
 onBeforeUnmount(() => {

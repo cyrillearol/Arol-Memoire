@@ -249,6 +249,12 @@ class PlatformWorkflowTest extends TestCase
         ]);
 
         $this->actingAs($tutor)
+            ->getJson(route('calls.pending', ['initial' => true]))
+            ->assertOk()
+            ->assertJsonCount(0, 'signals')
+            ->assertJsonPath('latest_id', DB::table('call_signals')->max('id'));
+
+        $this->actingAs($tutor)
             ->getJson(route('calls.pending'))
             ->assertOk()
             ->assertJsonPath('signals.0.conversation_id', $conversation->id)

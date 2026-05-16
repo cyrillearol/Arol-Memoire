@@ -599,6 +599,21 @@ const restorePendingIncomingCall = async () => {
     }
 };
 
+const initializeCallSignalCursor = async () => {
+    if (!currentUserId.value) return;
+
+    try {
+        const response = await window.axios.get(route('calls.pending'), {
+            params: { after: latestCallSignalId, initial: true },
+            timeout: 8000,
+        });
+
+        latestCallSignalId = Math.max(latestCallSignalId, Number(response.data?.latest_id || 0));
+    } catch (error) {
+        console.warn('Initialisation des signaux d appel impossible', error);
+    }
+};
+
 const pollPendingCallSignals = async () => {
     if (!currentUserId.value) return;
 
@@ -683,8 +698,10 @@ watch([callState, callMode], () => {
 
 onMounted(() => {
     void restorePendingIncomingCall();
-    void pollPendingCallSignals();
-    callSignalPoller = window.setInterval(pollPendingCallSignals, 2500);
+    void initializeCallSignalCursor().then(() => {
+        void pollPendingCallSignals();
+        callSignalPoller = window.setInterval(pollPendingCallSignals, 2500);
+    });
 });
 
 onBeforeUnmount(() => {
