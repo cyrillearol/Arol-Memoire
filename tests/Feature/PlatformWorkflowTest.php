@@ -274,6 +274,29 @@ class PlatformWorkflowTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_authenticated_user_can_authorize_personal_broadcast_channel(): void
+    {
+        config([
+            'broadcasting.default' => 'pusher',
+            'broadcasting.connections.pusher.key' => 'test-key',
+            'broadcasting.connections.pusher.secret' => 'test-secret',
+            'broadcasting.connections.pusher.app_id' => 'test-app',
+        ]);
+
+        app(\Illuminate\Broadcasting\BroadcastManager::class)->forgetDrivers();
+        require base_path('routes/channels.php');
+
+        $user = User::factory()->create(['role' => 'etudiant']);
+
+        $this->actingAs($user)
+            ->post('/broadcasting/auth', [
+                'socket_id' => '1234.5678',
+                'channel_name' => 'private-users.'.$user->id,
+            ])
+            ->assertOk()
+            ->assertJsonStructure(['auth']);
+    }
+
     private function createTutor(array $attributes = []): User
     {
         $tutor = User::factory()->create([

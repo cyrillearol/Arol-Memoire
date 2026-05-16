@@ -17,16 +17,12 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\StudentBookingController;
 use App\Http\Controllers\TutorController;
 use App\Http\Controllers\TutorWorkspaceController;
-use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
 
 Route::get('/tuteurs', [TutorController::class, 'index'])->name('tutors.index');
 Route::get('/tuteurs/{tutor}', [TutorController::class, 'show'])->name('tutors.show');
-
-Broadcast::routes(['middleware' => ['web', 'auth']]);
-require __DIR__.'/channels.php';
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
