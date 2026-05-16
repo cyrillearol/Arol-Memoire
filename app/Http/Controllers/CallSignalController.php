@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Events\ConversationCallSignal;
+use App\Events\UserCallSignal;
 use App\Models\Conversation;
 use App\Support\PlatformNotifier;
 use App\Support\RealtimeBroadcaster;
@@ -29,10 +30,11 @@ class CallSignalController extends Controller
             'payload' => ['nullable', 'array'],
         ]);
 
+        $recipient = $user->id === $conversation->student_id
+            ? $conversation->tutor
+            : $conversation->student;
+
         if ($validated['type'] === 'call-offer') {
-            $recipient = $user->id === $conversation->student_id
-                ? $conversation->tutor
-                : $conversation->student;
             $modeLabel = ($validated['mode'] ?? 'audio') === 'video' ? 'vidéo' : 'audio';
             $subject = $conversation->booking?->subject ? ' pour la séance de '.$conversation->booking->subject : '';
 
@@ -48,6 +50,16 @@ class CallSignalController extends Controller
         RealtimeBroadcaster::send(new ConversationCallSignal(
             conversationId: $conversation->id,
             senderId: $user->id,
+            type: $validated['type'],
+            mode: $validated['mode'] ?? null,
+            payload: $validated['payload'] ?? [],
+        ), true);
+
+        RealtimeBroadcaster::send(new UserCallSignal(
+            recipientId: $recipient->id,
+            conversationId: $conversation->id,
+            senderId: $user->id,
+            senderName: $user->name,
             type: $validated['type'],
             mode: $validated['mode'] ?? null,
             payload: $validated['payload'] ?? [],

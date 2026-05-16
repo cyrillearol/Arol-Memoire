@@ -2,7 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { Check, Info, LoaderCircle, Paperclip, Phone, PhoneOff, Send, Video, X } from 'lucide-vue-next';
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 const props = defineProps({
     conversations: {
@@ -437,6 +437,14 @@ const handleCallSignal = async (event) => {
         callMode.value = event.mode || 'audio';
         callConversationId.value = eventConversationId || props.selectedConversation?.id;
         incomingOffer.value = event.payload.description;
+
+        const queuedCandidates = Array.isArray(event.payload?.candidates)
+            ? event.payload.candidates.filter(Boolean)
+            : [];
+
+        if (queuedCandidates.length) {
+            pendingRemoteCandidates.push(...queuedCandidates);
+        }
         callState.value = 'incoming';
         callStatus.value = event.mode === 'video' ? 'Appel vidéo entrant' : 'Appel audio entrant';
         return;
@@ -470,6 +478,38 @@ const handleCallSignal = async (event) => {
     if (event.type === 'call-end') {
         cleanupCall();
         setCallError('L’appel est terminé.');
+    }
+};
+
+const readPendingIncomingCall = () => {
+    try {
+        const raw = window.sessionStorage?.getItem('tutorlink:incoming-call');
+        if (!raw) return null;
+
+        window.sessionStorage?.removeItem('tutorlink:incoming-call');
+        const event = JSON.parse(raw);
+
+        if (!event?.conversation_id || Date.now() - Number(event.stored_at || 0) > 60000) {
+            return null;
+        }
+
+        return event;
+    } catch (error) {
+        console.warn('Appel entrant non restaure', error);
+        return null;
+    }
+};
+
+const restorePendingIncomingCall = async () => {
+    const event = readPendingIncomingCall();
+    if (!event) return;
+
+    await nextTick();
+    await handleCallSignal(event);
+
+    if (event.auto_accept) {
+        await nextTick();
+        void acceptCall();
     }
 };
 
@@ -534,6 +574,10 @@ watch([callState, callMode], () => {
     if (callState.value !== 'idle') {
         void attachStreams();
     }
+});
+
+onMounted(() => {
+    void restorePendingIncomingCall();
 });
 
 onBeforeUnmount(() => {

@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { Link, useForm, usePage } from '@inertiajs/vue3';
+import { Link, router, useForm, usePage } from '@inertiajs/vue3';
 import {
     AlertCircle,
     Bell,
@@ -11,7 +11,10 @@ import {
     History,
     Mail,
     Menu,
+    PhoneIncoming,
+    PhoneOff,
     Search,
+    Video,
     Settings,
     Star,
     UserRound,
@@ -26,7 +29,12 @@ const liveUnreadCount = ref(0);
 const mobileMenuOpen = ref(false);
 const reportModalOpen = ref(false);
 const liveNotice = ref(null);
+const incomingCall = ref(null);
+const incomingCallDeclining = ref(false);
+const incomingCallJoining = ref(false);
 const unreadNotificationsCount = computed(() => liveUnreadCount.value);
+const incomingCallTitle = computed(() => incomingCall.value?.mode === 'video' ? 'Appel video entrant' : 'Appel audio entrant');
+const incomingCallIcon = computed(() => incomingCall.value?.mode === 'video' ? Video : PhoneIncoming);
 
 const reportForm = useForm({
     subject: '',
@@ -53,15 +61,114 @@ const showLiveNotice = (notification) => {
     }, 8000);
 };
 
+const sameIncomingCall = (event) => incomingCall.value
+    && Number(incomingCall.value.conversation_id) === Number(event?.conversation_id);
+
+const persistIncomingCall = (call, autoAccept = false) => {
+    if (!call) return;
+
+    try {
+        window.sessionStorage?.setItem('tutorlink:incoming-call', JSON.stringify({
+            ...call,
+            auto_accept: autoAccept,
+            stored_at: Date.now(),
+        }));
+    } catch (error) {
+        console.warn('Appel entrant non sauvegarde', error);
+    }
+};
+
+const handleUserCallSignal = (event) => {
+    if (!event || Number(event.sender_id) === Number(user.value?.id) || route().current('messages.index')) {
+        return;
+    }
+
+    if (event.type === 'call-offer') {
+        if (!event.payload?.description) return;
+
+        incomingCall.value = {
+            ...event,
+            payload: {
+                ...(event.payload || {}),
+                candidates: event.payload?.candidates || [],
+            },
+        };
+        incomingCallJoining.value = false;
+        incomingCallDeclining.value = false;
+        return;
+    }
+
+    if (event.type === 'ice-candidate' && sameIncomingCall(event)) {
+        const candidate = event.payload?.candidate;
+        if (!candidate) return;
+
+        const payload = incomingCall.value.payload || {};
+        incomingCall.value = {
+            ...incomingCall.value,
+            payload: {
+                ...payload,
+                candidates: [...(payload.candidates || []), candidate],
+            },
+        };
+
+        if (incomingCallJoining.value) {
+            persistIncomingCall(incomingCall.value, true);
+        }
+
+        return;
+    }
+
+    if (['call-answer', 'call-decline', 'call-end'].includes(event.type) && sameIncomingCall(event)) {
+        incomingCall.value = null;
+        incomingCallJoining.value = false;
+        incomingCallDeclining.value = false;
+    }
+};
+
+const acceptIncomingCall = () => {
+    if (!incomingCall.value?.url || incomingCallJoining.value) return;
+
+    incomingCallJoining.value = true;
+    persistIncomingCall(incomingCall.value, true);
+    mobileMenuOpen.value = false;
+    router.visit(incomingCall.value.url);
+};
+
+const declineIncomingCall = () => {
+    if (!incomingCall.value || incomingCallDeclining.value) return;
+
+    const call = incomingCall.value;
+    incomingCallDeclining.value = true;
+
+    window.axios.post(route('calls.signal', call.conversation_id), {
+        type: 'call-decline',
+        mode: call.mode || 'audio',
+        payload: { reason: 'declined' },
+    }, { timeout: 10000 })
+        .catch((error) => {
+            console.warn('Refus d appel non envoye', error);
+        })
+        .finally(() => {
+            if (sameIncomingCall(call)) {
+                incomingCall.value = null;
+            }
+
+            incomingCallDeclining.value = false;
+            incomingCallJoining.value = false;
+        });
+};
+
 onMounted(() => {
     if (!window.Echo || !user.value?.id) {
         return;
     }
 
-    window.Echo.private(`users.${user.value.id}`).listen('.notification.created', (event) => {
-        liveUnreadCount.value += 1;
-        showLiveNotice(event.notification);
-    });
+    window.Echo.private(`users.${user.value.id}`)
+        .listen('.notification.created', (event) => {
+            liveUnreadCount.value += 1;
+            showLiveNotice(event.notification);
+        })
+        .listen('.call.signal', handleUserCallSignal);
 });
 
 onBeforeUnmount(() => {
@@ -290,6 +397,30 @@ const openReportModal = () => {
                 </div>
                 <slot />
             </main>
+        </div>
+
+        <div v-if="incomingCall" class="fixed inset-x-4 bottom-4 z-50 sm:left-auto sm:right-6 sm:w-96">
+            <div class="rounded-lg border border-amber-200 bg-white p-4 shadow-2xl">
+                <div class="flex items-start gap-3">
+                    <div class="grid size-11 shrink-0 place-items-center rounded-lg bg-tutor-gold text-tutor-navy">
+                        <component :is="incomingCallIcon" class="size-5" />
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-bold text-tutor-navy">{{ incomingCallTitle }}</p>
+                        <p class="mt-1 text-sm text-slate-600">{{ incomingCall.sender_name || 'Un utilisateur' }} vous appelle.</p>
+                    </div>
+                </div>
+                <div class="mt-4 grid grid-cols-2 gap-2">
+                    <button type="button" class="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-60" :disabled="incomingCallJoining || incomingCallDeclining" @click="acceptIncomingCall">
+                        <component :is="incomingCallIcon" class="size-4" />
+                        {{ incomingCallJoining ? 'Ouverture...' : 'Accepter' }}
+                    </button>
+                    <button type="button" class="inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-60" :disabled="incomingCallJoining || incomingCallDeclining" @click="declineIncomingCall">
+                        <PhoneOff class="size-4" />
+                        {{ incomingCallDeclining ? 'Refus...' : 'Refuser' }}
+                    </button>
+                </div>
+            </div>
         </div>
 
         <div v-if="reportModalOpen" class="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 px-4 py-6 backdrop-blur-sm">
