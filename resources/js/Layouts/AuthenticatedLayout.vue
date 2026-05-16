@@ -131,42 +131,69 @@ const mediaErrorMessage = (error) => {
         return 'Aucun micro ou camera utilisable n a ete trouve sur cet appareil.';
     }
 
-    if (['NotReadableError', 'TrackStartError'].includes(error?.name)) {
-        return 'Le micro ou la camera est deja utilise par une autre application. Fermez l autre application puis reessayez.';
+    if (['NotReadableError', 'TrackStartError', 'OperationError', 'AbortError'].includes(error?.name)) {
+        return 'Le micro ou la camera n a pas pu demarrer. Fermez les autres onglets ou applications qui utilisent la camera, puis reessayez.';
     }
 
     return `Impossible d allumer le micro ou la camera${error?.name ? ` (${error.name})` : ''}.`;
 };
 
 const requestGlobalLocalStream = async (mode) => {
-    if (!navigator.mediaDevices?.getUserMedia || !window.RTCPeerConnection || !window.isSecureContext) {
+    if (!window.RTCPeerConnection || !window.isSecureContext) {
         throw new Error('WEBRTC_UNAVAILABLE');
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+        globalLocalStream = new MediaStream();
+        incomingCall.value = { ...incomingCall.value, mode: 'audio' };
+        globalCallStatus.value = 'Micro/camera indisponibles, appel lance en reception.';
+        await attachGlobalStreams();
+        return globalLocalStream;
     }
 
     const audio = {
         echoCancellation: true,
         noiseSuppression: true,
     };
+    const video = {
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        facingMode: 'user',
+    };
+    const attempts = mode === 'video'
+        ? [
+            { audio, video },
+            { audio: true, video: true },
+            { audio, video: false },
+            { audio: true, video: false },
+        ]
+        : [
+            { audio, video: false },
+            { audio: true, video: false },
+        ];
 
-    try {
-        globalLocalStream = await navigator.mediaDevices.getUserMedia({
-            audio,
-            video: mode === 'video' ? { facingMode: 'user' } : false,
-        });
-    } catch (error) {
-        if (mode !== 'video') {
-            throw error;
-        }
+    let lastError = null;
 
+    for (const constraints of attempts) {
         try {
-            globalLocalStream = await navigator.mediaDevices.getUserMedia({ audio, video: false });
-            incomingCall.value = { ...incomingCall.value, mode: 'audio' };
-            globalCallStatus.value = 'Camera indisponible, appel audio lance.';
-        } catch (audioError) {
-            throw audioError;
+            globalLocalStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+            if (mode === 'video' && constraints.video === false) {
+                incomingCall.value = { ...incomingCall.value, mode: 'audio' };
+                globalCallStatus.value = 'Camera indisponible, appel audio lance.';
+            }
+
+            await attachGlobalStreams();
+            return globalLocalStream;
+        } catch (error) {
+            lastError = error;
         }
     }
 
+    globalLocalStream = new MediaStream();
+    incomingCall.value = { ...incomingCall.value, mode: 'audio' };
+    globalCallStatus.value = 'Micro/camera indisponibles, appel lance en reception.';
+    console.warn('Media local indisponible', lastError);
     await attachGlobalStreams();
 
     return globalLocalStream;
@@ -363,7 +390,7 @@ const acceptIncomingCall = async () => {
         }
 
         const connection = createGlobalPeerConnection();
-        globalLocalStream.getTracks().forEach((track) => connection.addTrack(track, globalLocalStream));
+        globalLocalStream?.getTracks().forEach((track) => connection.addTrack(track, globalLocalStream));
 
         await connection.setRemoteDescription(new RTCSessionDescription(incomingCall.value.payload.description));
         await flushGlobalCandidates();
