@@ -14,6 +14,7 @@ class UserCallSignal implements ShouldBroadcastNow
 
     public function __construct(
         public int $recipientId,
+        public int $signalId,
         public int $conversationId,
         public int $senderId,
         public string $senderName,
@@ -38,6 +39,7 @@ class UserCallSignal implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         return [
+            'signal_id' => $this->signalId,
             'conversation_id' => $this->conversationId,
             'sender_id' => $this->senderId,
             'sender_name' => $this->senderName,

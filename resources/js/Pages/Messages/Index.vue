@@ -46,6 +46,9 @@ let peerConnection = null;
 let localStream = null;
 let remoteStream = null;
 let pendingRemoteCandidates = [];
+let latestCallSignalId = 0;
+let callSignalPoller = null;
+const processedCallSignalIds = new Set();
 
 const callState = ref('idle');
 const callMode = ref('audio');
@@ -166,6 +169,28 @@ const setCallError = (message) => {
             callError.value = '';
         }
     }, 7000);
+};
+
+const rememberCallSignal = (event) => {
+    const signalId = Number(event?.signal_id || 0);
+
+    if (!signalId) {
+        return true;
+    }
+
+    latestCallSignalId = Math.max(latestCallSignalId, signalId);
+
+    if (processedCallSignalIds.has(signalId)) {
+        return false;
+    }
+
+    processedCallSignalIds.add(signalId);
+
+    if (processedCallSignalIds.size > 200) {
+        processedCallSignalIds.delete(processedCallSignalIds.values().next().value);
+    }
+
+    return true;
 };
 
 const mediaErrorMessage = (error) => {
@@ -454,6 +479,7 @@ const declineCall = () => {
 
 const handleCallSignal = async (event) => {
     if (!event || Number(event.sender_id) === Number(currentUserId.value)) return;
+    if (!rememberCallSignal(event)) return;
 
     const eventConversationId = event.conversation_id || null;
 
@@ -463,6 +489,10 @@ const handleCallSignal = async (event) => {
 
     if (event.type === 'call-offer') {
         if (callState.value !== 'idle') {
+            if (callConversationId.value && Number(callConversationId.value) === Number(eventConversationId)) {
+                return;
+            }
+
             await sendCallSignal('call-decline', { reason: 'busy' }, event.mode || 'audio', eventConversationId);
             return;
         }
@@ -548,6 +578,25 @@ const restorePendingIncomingCall = async () => {
     }
 };
 
+const pollPendingCallSignals = async () => {
+    if (!currentUserId.value) return;
+
+    try {
+        const response = await window.axios.get(route('calls.pending'), {
+            params: { after: latestCallSignalId },
+            timeout: 8000,
+        });
+
+        for (const signal of response.data?.signals || []) {
+            await handleCallSignal(signal);
+        }
+
+        latestCallSignalId = Math.max(latestCallSignalId, Number(response.data?.latest_id || 0));
+    } catch (error) {
+        console.warn('Lecture des signaux d appel impossible', error);
+    }
+};
+
 const leaveConversationChannels = () => {
     if (!window.Echo) return;
 
@@ -613,9 +662,15 @@ watch([callState, callMode], () => {
 
 onMounted(() => {
     void restorePendingIncomingCall();
+    void pollPendingCallSignals();
+    callSignalPoller = window.setInterval(pollPendingCallSignals, 2500);
 });
 
 onBeforeUnmount(() => {
+    if (callSignalPoller) {
+        window.clearInterval(callSignalPoller);
+    }
+
     if (callState.value !== 'idle') {
         void endCall();
     } else {

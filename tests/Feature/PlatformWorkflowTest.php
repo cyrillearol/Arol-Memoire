@@ -240,6 +240,28 @@ class PlatformWorkflowTest extends TestCase
             ->assertNoContent();
 
         $this->assertDatabaseCount('notifications', 0);
+        $this->assertDatabaseHas('call_signals', [
+            'conversation_id' => $conversation->id,
+            'sender_id' => $student->id,
+            'recipient_id' => $tutor->id,
+            'type' => 'call-offer',
+            'mode' => 'video',
+        ]);
+
+        $this->actingAs($tutor)
+            ->getJson(route('calls.pending'))
+            ->assertOk()
+            ->assertJsonPath('signals.0.conversation_id', $conversation->id)
+            ->assertJsonPath('signals.0.sender_id', $student->id)
+            ->assertJsonPath('signals.0.sender_name', $student->name)
+            ->assertJsonPath('signals.0.type', 'call-offer')
+            ->assertJsonPath('signals.0.mode', 'video')
+            ->assertJsonPath('signals.0.payload.description.type', 'offer');
+
+        $this->actingAs($student)
+            ->getJson(route('calls.pending'))
+            ->assertOk()
+            ->assertJsonCount(0, 'signals');
     }
 
     public function test_call_signals_require_a_participant_and_an_accepted_booking(): void

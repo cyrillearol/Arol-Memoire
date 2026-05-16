@@ -42,6 +42,9 @@ let globalPeerConnection = null;
 let globalLocalStream = null;
 let globalRemoteStream = null;
 let globalPendingCandidates = [];
+let latestCallSignalId = 0;
+let callSignalPoller = null;
+const processedCallSignalIds = new Set();
 const unreadNotificationsCount = computed(() => liveUnreadCount.value);
 const incomingCallIcon = computed(() => incomingCall.value?.mode === 'video' ? Video : PhoneIncoming);
 const globalCallTitle = computed(() => {
@@ -75,6 +78,28 @@ const showLiveNotice = (notification) => {
             liveNotice.value = null;
         }
     }, 8000);
+};
+
+const rememberCallSignal = (event) => {
+    const signalId = Number(event?.signal_id || 0);
+
+    if (!signalId) {
+        return true;
+    }
+
+    latestCallSignalId = Math.max(latestCallSignalId, signalId);
+
+    if (processedCallSignalIds.has(signalId)) {
+        return false;
+    }
+
+    processedCallSignalIds.add(signalId);
+
+    if (processedCallSignalIds.size > 200) {
+        processedCallSignalIds.delete(processedCallSignalIds.values().next().value);
+    }
+
+    return true;
 };
 
 const attachGlobalStreams = async () => {
@@ -268,7 +293,11 @@ const endGlobalCall = (notify = true) => {
 };
 
 const handleUserCallSignal = async (event) => {
-    if (!event || Number(event.sender_id) === Number(user.value?.id) || route().current('messages.index')) {
+    if (!event || Number(event.sender_id) === Number(user.value?.id)) {
+        return;
+    }
+
+    if (!rememberCallSignal(event) || route().current('messages.index')) {
         return;
     }
 
@@ -280,6 +309,10 @@ const handleUserCallSignal = async (event) => {
         if (!event.payload?.description) return;
 
         if (globalCallState.value !== 'idle') {
+            if (incomingCall.value?.conversation_id && Number(incomingCall.value.conversation_id) === Number(event.conversation_id)) {
+                return;
+            }
+
             await window.axios.post(route('calls.signal', event.conversation_id), {
                 type: 'call-decline',
                 mode: event.mode || 'audio',
@@ -363,20 +396,48 @@ const declineIncomingCall = () => {
         });
 };
 
+const pollPendingCallSignals = async () => {
+    if (!user.value?.id || route().current('messages.index')) return;
+
+    try {
+        const response = await window.axios.get(route('calls.pending'), {
+            params: { after: latestCallSignalId },
+            timeout: 8000,
+        });
+
+        for (const signal of response.data?.signals || []) {
+            await handleUserCallSignal(signal);
+        }
+
+        latestCallSignalId = Math.max(latestCallSignalId, Number(response.data?.latest_id || 0));
+    } catch (error) {
+        console.warn('Lecture des appels entrants impossible', error);
+    }
+};
+
 onMounted(() => {
-    if (!window.Echo || !user.value?.id) {
+    if (!user.value?.id) {
         return;
     }
 
-    window.Echo.private(`users.${user.value.id}`)
-        .listen('.notification.created', (event) => {
-            liveUnreadCount.value += 1;
-            showLiveNotice(event.notification);
-        })
-        .listen('.call.signal', handleUserCallSignal);
+    if (window.Echo) {
+        window.Echo.private(`users.${user.value.id}`)
+            .listen('.notification.created', (event) => {
+                liveUnreadCount.value += 1;
+                showLiveNotice(event.notification);
+            })
+            .listen('.call.signal', handleUserCallSignal);
+    }
+
+    void pollPendingCallSignals();
+    callSignalPoller = window.setInterval(pollPendingCallSignals, 2500);
 });
 
 onBeforeUnmount(() => {
+    if (callSignalPoller) {
+        window.clearInterval(callSignalPoller);
+    }
+
     if (globalCallState.value === 'incoming') {
         void sendGlobalCallSignal('call-decline', { reason: 'declined' }).catch(() => {});
         cleanupGlobalCall();

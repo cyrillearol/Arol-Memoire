@@ -51,6 +51,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/messages/{conversation?}', [MessageController::class, 'index'])->name('messages.index');
     Route::post('/messages/{conversation}', [MessageController::class, 'store'])->name('messages.store');
     Route::post('/messages/{conversation}/appel', [CallSignalController::class, 'store'])->name('calls.signal');
+    Route::get('/appels/signaux', [CallSignalController::class, 'pending'])->name('calls.pending');
 
     Route::post('/signalements', [ReportController::class, 'store'])->name('reports.store');
 
