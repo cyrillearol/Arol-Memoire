@@ -1,4 +1,5 @@
 <script setup>
+import GlobalCallHandler from '@/Components/GlobalCallHandler.vue';
 import { Link } from '@inertiajs/vue3';
 import { Menu, X } from 'lucide-vue-next';
 import { ref } from 'vue';
@@ -77,4 +78,5 @@ const nav = [
             </div>
         </div>
     </header>
+    <GlobalCallHandler />
 </template>
