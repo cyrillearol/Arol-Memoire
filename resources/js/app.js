@@ -20,8 +20,11 @@ const ziggyConfig = (() => {
 })();
 
 window.Ziggy = ziggyConfig;
-window.route = (name, params, absolute, config = ziggyConfig) =>
-    ziggyRoute(name, params, absolute, config);
+window.route = (name, params, absolute, config = ziggyConfig) => {
+    config.location = new URL(window.location.href);
+
+    return ziggyRoute(name, params, absolute, config);
+};
 
 const configuredAppName = import.meta.env.VITE_APP_NAME;
 const appName = configuredAppName && !configuredAppName.includes('$') ? configuredAppName : 'TutorLink';

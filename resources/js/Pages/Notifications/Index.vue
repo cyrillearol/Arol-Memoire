@@ -25,17 +25,17 @@ const toneClass = (tone) => ({
     <AuthenticatedLayout>
         <div class="mx-auto max-w-5xl">
             <div class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-                <div class="flex items-center gap-4">
-                    <span class="grid size-12 place-items-center rounded-lg bg-tutor-navy text-white">
+                <div class="flex items-start gap-3 sm:items-center sm:gap-4">
+                    <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-tutor-navy text-white sm:size-12">
                         <Bell class="size-6" />
                     </span>
                     <div>
-                        <h1 class="text-4xl font-bold">Notifications</h1>
+                        <h1 class="text-3xl font-bold sm:text-4xl">Notifications</h1>
                         <p class="mt-1 text-slate-600">Suivez vos réservations, validations, messages et signalements.</p>
                     </div>
                 </div>
 
-                <Link :href="route('notifications.read-all')" method="patch" as="button" class="tl-button-secondary">
+                <Link :href="route('notifications.read-all')" method="patch" as="button" class="tl-button-secondary w-full sm:w-auto">
                     <CheckCheck class="size-4" />
                     Tout marquer comme lu
                 </Link>
@@ -45,12 +45,12 @@ const toneClass = (tone) => ({
                 <article
                     v-for="notification in items.data"
                     :key="notification.id"
-                    class="rounded-lg border p-5 shadow-tutor transition hover:-translate-y-0.5 hover:shadow-tutor-strong"
+                    class="rounded-lg border p-4 shadow-tutor transition hover:-translate-y-0.5 hover:shadow-tutor-strong sm:p-5"
                     :class="toneClass(notification.tone)"
                 >
                     <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                         <div class="min-w-0">
-                            <div class="flex items-center gap-3">
+                            <div class="flex items-start gap-3 sm:items-center">
                                 <span v-if="!notification.read_at" class="size-2.5 rounded-full bg-tutor-gold"></span>
                                 <h2 class="text-xl font-bold">{{ notification.title }}</h2>
                             </div>
@@ -58,7 +58,7 @@ const toneClass = (tone) => ({
                             <p class="mt-3 text-xs font-semibold opacity-60">{{ notification.created_at }}</p>
                         </div>
 
-                        <div class="flex shrink-0 flex-wrap gap-2">
+                        <div class="flex w-full shrink-0 flex-wrap gap-2 md:w-auto">
                             <a v-if="notification.url" :href="notification.url" class="tl-button-secondary px-4 py-2 text-xs">
                                 <ExternalLink class="size-4" />
                                 Ouvrir

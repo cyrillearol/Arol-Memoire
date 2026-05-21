@@ -41,7 +41,7 @@ const money = (value) => `${new Intl.NumberFormat('fr-FR').format(value || 0)} F
         <PublicHeader active="tutors" />
 
         <section class="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-8 lg:grid-cols-[340px_1fr] lg:py-12">
-            <aside class="tl-card h-fit p-5 text-center sm:p-8">
+            <aside class="tl-card h-fit p-5 text-center sm:p-8 lg:sticky lg:top-24">
                 <div class="mx-auto grid size-28 place-items-center rounded-full bg-tutor-navy text-4xl font-bold text-white ring-8 ring-[#d5e3ff] sm:size-36 sm:text-5xl">{{ tutor.name.charAt(0) }}</div>
                 <h1 class="mt-6 break-words text-2xl font-bold sm:text-3xl">{{ tutor.name }}</h1>
                 <p class="mt-1 text-sm text-slate-600">{{ tutor.domain }}</p>
@@ -74,7 +74,18 @@ const money = (value) => `${new Intl.NumberFormat('fr-FR').format(value || 0)} F
 
                 <section>
                     <h2 class="text-2xl font-bold sm:text-3xl">Disponibilités</h2>
-                    <div class="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                    <div class="mt-6 grid gap-3 sm:hidden">
+                        <div v-for="day in days" :key="day.id" class="rounded-lg border border-slate-200 bg-white p-4">
+                            <div class="flex items-center justify-between gap-3">
+                                <p class="font-bold text-tutor-navy">{{ day.label }}</p>
+                                <div class="flex flex-wrap justify-end gap-2 text-xs font-bold">
+                                    <span class="rounded-full px-3 py-1" :class="available(day.id, 'morning') ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-400'">Matin</span>
+                                    <span class="rounded-full px-3 py-1" :class="available(day.id, 'evening') ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-400'">Soir</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-6 hidden overflow-x-auto rounded-lg border border-slate-200 bg-white sm:block">
                         <table class="min-w-[620px] text-center text-sm">
                             <thead class="bg-slate-100 font-bold text-tutor-navy">
                                 <tr>
@@ -103,7 +114,7 @@ const money = (value) => `${new Intl.NumberFormat('fr-FR').format(value || 0)} F
                     </div>
                     <div v-if="reviews.length" class="mt-6 space-y-4">
                         <article v-for="review in reviews" :key="review.id" class="tl-card p-5">
-                            <div class="flex items-start justify-between gap-4">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                 <div class="flex items-center gap-3">
                                     <div class="grid size-10 place-items-center rounded-full bg-[#d5e3ff] font-bold text-tutor-navy">{{ review.student?.charAt(0) || 'E' }}</div>
                                     <div>
@@ -111,7 +122,7 @@ const money = (value) => `${new Intl.NumberFormat('fr-FR').format(value || 0)} F
                                         <p class="text-xs text-slate-500">{{ review.created_at }}</p>
                                     </div>
                                 </div>
-                                <p class="text-tutor-gold">★★★★★</p>
+                                <p class="shrink-0 text-tutor-gold">★★★★★</p>
                             </div>
                             <p class="mt-4 text-sm leading-6 text-slate-700">{{ review.comment }}</p>
                         </article>

@@ -20,7 +20,7 @@ const patchWithConfirmation = (url, message) => {
 
     <AuthenticatedLayout>
         <div>
-            <h1 class="text-4xl font-bold">Demandes de réservation</h1>
+            <h1 class="text-3xl font-bold sm:text-4xl">Demandes de réservation</h1>
             <p class="mt-2 text-slate-600">Acceptez ou refusez les nouvelles demandes des étudiants.</p>
         </div>
 
@@ -34,7 +34,7 @@ const patchWithConfirmation = (url, message) => {
                             <p class="text-sm text-slate-600">{{ booking.student?.name }} · {{ booking.scheduled_label }}</p>
                             <p class="mt-2 text-sm font-semibold text-[#9a6200]">{{ money(booking.amount) }} · {{ booking.payment_status }}</p>
                         </div>
-                        <div class="flex flex-wrap gap-2">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                             <Link :href="route('bookings.show', booking.id)" class="tl-button-secondary px-4 py-2 text-xs">Détails</Link>
                             <button type="button" class="tl-button-secondary px-4 py-2 text-xs" @click="patchWithConfirmation(route('bookings.refuse', booking.id), 'Refuser cette demande de réservation ?')">Refuser</button>
                             <button type="button" class="tl-button-primary px-4 py-2 text-xs" @click="patchWithConfirmation(route('bookings.accept', booking.id), 'Accepter cette demande de réservation ?')">Accepter</button>
@@ -51,7 +51,7 @@ const patchWithConfirmation = (url, message) => {
                 <article v-for="booking in upcoming" :key="booking.id" class="tl-card p-5">
                     <h3 class="text-xl font-bold text-tutor-navy">{{ booking.subject }}</h3>
                     <p class="mt-1 text-sm text-slate-600">{{ booking.student?.name }} · {{ booking.scheduled_label }}</p>
-                    <div class="mt-5 flex gap-2">
+                    <div class="mt-5 flex flex-wrap gap-2">
                         <Link :href="route('bookings.show', booking.id)" class="tl-button-secondary px-4 py-2 text-xs">Détails</Link>
                         <Link v-if="booking.conversation_id" :href="route('messages.index', booking.conversation_id)" class="tl-button-primary px-4 py-2 text-xs">Messages</Link>
                     </div>

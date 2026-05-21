@@ -42,7 +42,7 @@ const submit = () => {
         <Head title="Inscription" />
 
         <div class="text-center">
-            <h1 class="text-4xl font-bold">Créer votre compte</h1>
+            <h1 class="text-3xl font-bold sm:text-4xl">Créer votre compte</h1>
             <p class="mt-3 text-base leading-6 text-slate-600">Choisissez votre rôle et complétez uniquement les informations demandées.</p>
         </div>
 
@@ -92,7 +92,7 @@ const submit = () => {
                 <div class="mt-5">
                     <InputLabel for="subjects" value="Matières enseignées" />
                     <TextInput id="subjects" v-model="form.subjects" type="text" class="mt-2" :required="form.role === 'tuteur'" maxlength="1000" placeholder="Algèbre, statistiques, programmation" />
-                    <div class="mt-2 flex items-center justify-between text-xs text-slate-500">
+                    <div class="mt-2 flex flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
                         <span>Séparez les matières par des virgules.</span>
                         <span>{{ subjectCount }} matière(s)</span>
                     </div>
@@ -108,7 +108,7 @@ const submit = () => {
                 <div class="mt-5">
                     <InputLabel for="bio" value="Présentation professionnelle" />
                     <textarea id="bio" v-model="form.bio" :required="form.role === 'tuteur'" rows="5" maxlength="2000" class="tl-input mt-2 w-full px-4 py-3" placeholder="Décrivez votre expérience, votre méthode et le type d’accompagnement proposé."></textarea>
-                    <div class="mt-2 flex items-center justify-between text-xs text-slate-500">
+                    <div class="mt-2 flex flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
                         <span>Minimum 30 caractères, idéalement 30 mots ou plus.</span>
                         <span>{{ bioLength }}/2000 caractères · {{ bioWords }} mot(s)</span>
                     </div>
@@ -117,8 +117,8 @@ const submit = () => {
 
                 <div class="mt-5">
                     <InputLabel for="documents" value="Documents justificatifs" />
-                    <input id="documents" type="file" multiple :required="form.role === 'tuteur'" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="mt-2 block w-full rounded-lg border border-dashed border-slate-300 bg-white px-4 py-4 text-sm text-slate-600 file:me-4 file:rounded-lg file:border-0 file:bg-tutor-navy file:px-4 file:py-2 file:text-sm file:font-bold file:text-white hover:border-tutor-gold" @change="updateDocuments" />
-                    <div class="mt-2 flex items-center justify-between text-xs text-slate-500">
+                    <input id="documents" type="file" multiple :required="form.role === 'tuteur'" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="mt-2 block w-full rounded-lg border border-dashed border-slate-300 bg-white px-3 py-4 text-sm text-slate-600 file:mb-2 file:me-4 file:rounded-lg file:border-0 file:bg-tutor-navy file:px-4 file:py-2 file:text-sm file:font-bold file:text-white hover:border-tutor-gold sm:px-4" @change="updateDocuments" />
+                    <div class="mt-2 flex flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
                         <span>PDF, image ou document Word. Maximum 5 fichiers de 5 Mo.</span>
                         <span>{{ documentCount }}/5 fichier(s)</span>
                     </div>

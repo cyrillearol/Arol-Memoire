@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 
@@ -30,7 +30,7 @@ const totalSubjects = () => props.subjectStats.reduce((sum, item) => sum + Numbe
     <AuthenticatedLayout>
         <div class="flex flex-col justify-between gap-5 md:flex-row md:items-center">
             <div>
-                <h1 class="text-4xl font-bold">Tableau de Bord</h1>
+                <h1 class="text-3xl font-bold sm:text-4xl">Tableau de Bord</h1>
                 <p class="mt-2 text-slate-600">Surveillance globale de l’écosystème TutorLink.</p>
             </div>
             <div class="relative w-full max-w-sm">
@@ -39,20 +39,20 @@ const totalSubjects = () => props.subjectStats.reduce((sum, item) => sum + Numbe
             </div>
         </div>
 
-        <div class="mt-8 grid gap-5 md:grid-cols-4">
-            <div class="tl-card p-6">
+        <div class="mt-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="tl-card p-5 sm:p-6">
                 <p class="text-sm text-slate-600">Total étudiants</p>
                 <p class="mt-5 text-3xl font-bold text-tutor-navy">{{ stats.students || 0 }}</p>
             </div>
-            <div class="tl-card p-6">
+            <div class="tl-card p-5 sm:p-6">
                 <p class="text-sm text-slate-600">Tuteurs validés</p>
                 <p class="mt-5 text-3xl font-bold text-tutor-navy">{{ stats.validatedTutors || 0 }}</p>
             </div>
-            <div class="tl-card p-6">
+            <div class="tl-card p-5 sm:p-6">
                 <p class="text-sm text-slate-600">Réservations</p>
                 <p class="mt-5 text-3xl font-bold text-tutor-navy">{{ stats.bookings || 0 }}</p>
             </div>
-            <div class="tl-card p-6">
+            <div class="tl-card p-5 sm:p-6">
                 <p class="text-sm text-slate-600">Signalements ouverts</p>
                 <p class="mt-5 text-3xl font-bold text-red-600">{{ stats.pendingReports || 0 }}</p>
             </div>
@@ -60,13 +60,13 @@ const totalSubjects = () => props.subjectStats.reduce((sum, item) => sum + Numbe
 
         <div class="mt-8 grid gap-6 xl:grid-cols-[1fr_320px]">
             <section class="space-y-6">
-                <div class="tl-card p-6">
-                    <div class="flex items-center justify-between">
+                <div class="tl-card p-5 sm:p-6">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <h2 class="text-2xl font-bold">Croissance des utilisateurs</h2>
-                        <div class="flex gap-4 text-sm font-bold"><span class="text-tutor-navy">● Tuteurs</span><span class="text-[#9a6200]">● Étudiants</span></div>
+                        <div class="flex flex-wrap gap-3 text-sm font-bold"><span class="text-tutor-navy">● Tuteurs</span><span class="text-[#9a6200]">● Étudiants</span></div>
                     </div>
-                    <div class="mt-8 h-56 rounded-lg bg-tutor-surface p-6">
-                        <div class="flex h-full items-end gap-4">
+                    <div class="mt-8 h-48 rounded-lg bg-tutor-surface p-4 sm:h-56 sm:p-6">
+                        <div class="flex h-full items-end gap-2 sm:gap-4">
                             <div v-for="height in [42, 58, 48, 72, 88, 36, 95]" :key="height" class="flex-1 rounded-t-lg bg-slate-300" :style="{ height: height + '%' }"></div>
                         </div>
                     </div>
@@ -79,7 +79,7 @@ const totalSubjects = () => props.subjectStats.reduce((sum, item) => sum + Numbe
                     </div>
 
                     <div v-if="pendingTutors.length" class="overflow-x-auto">
-                        <table class="min-w-full text-left text-sm">
+                        <table class="min-w-[760px] text-left text-sm">
                             <thead class="bg-slate-100 text-xs font-bold uppercase tracking-wide text-slate-500">
                                 <tr>
                                     <th class="px-5 py-4">Tuteur</th>
@@ -104,7 +104,7 @@ const totalSubjects = () => props.subjectStats.reduce((sum, item) => sum + Numbe
                                         <span v-else class="text-xs text-slate-400">Aucun</span>
                                     </td>
                                     <td class="px-5 py-4">
-                                        <div class="flex gap-2">
+                                        <div class="flex flex-wrap gap-2">
                                             <Link :href="route('admin.tutors.accept', tutor.id)" method="patch" as="button" class="rounded-lg bg-emerald-100 px-3 py-2 text-xs font-bold text-emerald-700">Valider</Link>
                                             <Link :href="route('admin.tutors.reject', tutor.id)" method="patch" as="button" class="rounded-lg bg-red-100 px-3 py-2 text-xs font-bold text-red-700">Refuser</Link>
                                         </div>
@@ -118,7 +118,7 @@ const totalSubjects = () => props.subjectStats.reduce((sum, item) => sum + Numbe
             </section>
 
             <aside class="space-y-6">
-                <div class="tl-card p-6">
+                <div class="tl-card p-5 sm:p-6">
                     <h2 class="text-2xl font-bold">Réservations par matière</h2>
                     <div v-if="subjectStats.length" class="mt-6 space-y-5">
                         <div v-for="item in subjectStats" :key="item.subject">
@@ -129,7 +129,7 @@ const totalSubjects = () => props.subjectStats.reduce((sum, item) => sum + Numbe
                     <div v-else class="mt-6 text-sm text-slate-600">Aucune réservation enregistrée.</div>
                 </div>
 
-                <div class="tl-card p-6">
+                <div class="tl-card p-5 sm:p-6">
                     <h2 class="text-2xl font-bold">Signalements récents</h2>
                     <div v-if="reports.length" class="mt-5 space-y-4">
                         <article v-for="report in reports" :key="report.id" class="rounded-lg border border-slate-200 p-4">

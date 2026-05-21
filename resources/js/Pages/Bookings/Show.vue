@@ -25,10 +25,10 @@ const cancelBooking = () => {
     <AuthenticatedLayout>
         <div class="grid gap-8 xl:grid-cols-[1fr_360px]">
             <section class="space-y-6">
-                <div class="tl-card p-7">
+                <div class="tl-card p-5 sm:p-7">
                     <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                         <div>
-                            <h1 class="text-4xl font-bold">{{ booking.subject }}</h1>
+                            <h1 class="text-3xl font-bold sm:text-4xl">{{ booking.subject }}</h1>
                             <p class="mt-2 text-slate-600">{{ booking.scheduled_label }} · {{ booking.duration_minutes }} min</p>
                         </div>
                         <span class="rounded-full bg-slate-100 px-4 py-2 text-sm font-bold text-tutor-navy">{{ labels[booking.status] || booking.status }}</span>
@@ -57,14 +57,14 @@ const cancelBooking = () => {
                     </div>
                 </div>
 
-                <div v-if="viewerRole === 'etudiant' && booking.status === 'terminee'" class="tl-card p-7">
+                <div v-if="viewerRole === 'etudiant' && booking.status === 'terminee'" class="tl-card p-5 sm:p-7">
                     <h2 class="text-2xl font-bold">Évaluer le tuteur</h2>
                     <form class="mt-5 space-y-4" @submit.prevent="submitReview">
                         <select v-model="reviewForm.rating" class="tl-input w-full px-4 py-3 md:w-48">
                             <option v-for="rating in [5,4,3,2,1]" :key="rating" :value="rating">{{ rating }} étoile(s)</option>
                         </select>
                         <textarea v-model="reviewForm.comment" maxlength="2000" class="tl-input w-full px-4 py-3" rows="4" placeholder="Votre avis sur la séance..."></textarea>
-                        <div class="flex items-center justify-between text-xs text-slate-500">
+                        <div class="flex flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
                             <span>Décrivez ce qui a été utile pendant la séance.</span>
                             <span>{{ reviewForm.comment.length }}/2000 caractères</span>
                         </div>
@@ -74,7 +74,7 @@ const cancelBooking = () => {
             </section>
 
             <aside class="space-y-4">
-                <div class="tl-card p-6">
+                <div class="tl-card p-5 sm:p-6">
                     <h2 class="text-2xl font-bold">Actions</h2>
                     <div class="mt-5 grid gap-3">
                         <Link v-if="booking.conversation_id" :href="route('messages.index', booking.conversation_id)" class="tl-button-primary w-full">Ouvrir la messagerie</Link>

@@ -785,8 +785,8 @@ const onFile = (event) => {
     <Head title="Messages" />
 
     <AuthenticatedLayout>
-        <div class="grid min-h-[calc(100vh-5rem)] rounded-lg border border-slate-200 bg-white shadow-tutor lg:grid-cols-[320px_1fr_300px] lg:overflow-hidden">
-            <aside class="max-h-80 overflow-y-auto border-b border-slate-200 bg-white lg:max-h-none lg:border-b-0 lg:border-r">
+        <div class="grid min-h-[calc(100svh-7rem)] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-tutor lg:grid-cols-[320px_1fr_300px]">
+            <aside class="max-h-64 overflow-y-auto border-b border-slate-200 bg-white sm:max-h-80 lg:max-h-none lg:border-b-0 lg:border-r">
                 <div class="border-b border-slate-200 p-4 sm:p-6">
                     <h1 class="text-3xl font-bold">Messages</h1>
                     <input class="tl-input mt-4 w-full px-4 py-3" placeholder="Rechercher une discussion" />
@@ -797,10 +797,10 @@ const onFile = (event) => {
                         v-for="conversation in localConversations"
                         :key="conversation.id"
                         :href="route('messages.index', conversation.id)"
-                        class="flex gap-3 px-5 py-4 transition hover:bg-tutor-surface"
+                        class="flex gap-3 px-4 py-4 transition hover:bg-tutor-surface sm:px-5"
                         :class="selectedConversation?.id === conversation.id ? 'border-l-4 border-tutor-gold bg-[#fff7e8]' : ''"
                     >
-                        <div class="relative grid size-12 place-items-center rounded-full bg-tutor-navy font-bold text-white">
+                        <div class="relative grid size-11 shrink-0 place-items-center rounded-full bg-tutor-navy font-bold text-white sm:size-12">
                             {{ conversation.other_user?.name?.charAt(0) || 'U' }}
                             <span class="absolute bottom-0 right-0 size-3 rounded-full border-2 border-white bg-emerald-500"></span>
                         </div>
@@ -818,7 +818,7 @@ const onFile = (event) => {
                 </div>
             </aside>
 
-            <section class="flex min-h-[70vh] flex-col bg-white lg:min-h-[640px]">
+            <section class="flex min-h-[calc(100svh-22rem)] flex-col bg-white sm:min-h-[70vh] lg:min-h-[640px]">
                 <template v-if="selectedConversation">
                     <header class="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 sm:px-6 md:flex-row md:items-center md:justify-between">
                         <div class="flex items-center gap-3">
@@ -830,7 +830,7 @@ const onFile = (event) => {
                                 <p class="text-sm text-slate-500">{{ selectedConversation.other_user?.domain || selectedConversation.other_user?.role }}</p>
                             </div>
                         </div>
-                        <div class="flex shrink-0 gap-2 text-tutor-navy">
+                        <div class="flex w-full shrink-0 justify-end gap-2 text-tutor-navy md:w-auto">
                             <button
                                 type="button"
                                 title="Appel audio"
@@ -859,14 +859,14 @@ const onFile = (event) => {
                         {{ callError }}
                     </div>
 
-                    <div ref="messagesPanel" class="flex-1 space-y-5 overflow-y-auto bg-[#fbfcfd] p-4 sm:p-6">
+                    <div ref="messagesPanel" class="min-h-0 flex-1 space-y-5 overflow-y-auto bg-[#fbfcfd] p-3 sm:p-6">
                         <div
                             v-for="message in localMessages"
                             :key="message.id"
                             class="flex"
                             :class="message.is_mine ? 'justify-end' : 'justify-start'"
                         >
-                            <div class="max-w-[78%] rounded-lg px-4 py-3 text-sm leading-6" :class="message.is_mine ? 'bg-tutor-navy text-white' : 'bg-slate-100 text-tutor-ink'">
+                            <div class="max-w-[88%] break-words rounded-lg px-4 py-3 text-sm leading-6 sm:max-w-[78%]" :class="message.is_mine ? 'bg-tutor-navy text-white' : 'bg-slate-100 text-tutor-ink'">
                                 <p v-if="message.body">{{ message.body }}</p>
                                 <a v-if="message.attachment_url" :href="message.attachment_url" class="mt-2 block font-bold underline">Document joint</a>
                                 <p v-else-if="message.attachment_name" class="mt-2 font-bold">Document joint : {{ message.attachment_name }}</p>
@@ -878,7 +878,7 @@ const onFile = (event) => {
                         </div>
                     </div>
 
-                    <form class="border-t border-slate-200 bg-white p-3 sm:p-5" @submit.prevent="send">
+                    <form class="sticky bottom-0 border-t border-slate-200 bg-white p-3 sm:p-5" @submit.prevent="send">
                         <div class="flex items-center gap-2 rounded-lg bg-slate-100 p-2 sm:gap-3">
                             <label class="grid size-11 cursor-pointer place-items-center rounded-lg text-slate-500 transition hover:bg-white hover:text-[#9a6200]">
                                 <Paperclip class="size-5" />
@@ -943,7 +943,7 @@ const onFile = (event) => {
         </div>
 
         <div v-if="hasActiveCall" class="fixed inset-0 z-50 grid place-items-center bg-slate-950/75 px-4 py-6 backdrop-blur-sm">
-            <div class="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-2xl">
+            <div class="max-h-[92svh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-2xl">
                 <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
                     <div>
                         <p class="text-xs font-bold uppercase tracking-wide text-[#9a6200]">{{ callMode === 'video' ? 'Appel vidéo' : 'Appel audio' }}</p>

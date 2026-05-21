@@ -2,8 +2,12 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 
-defineProps({ users: { type: Object, required: true }, filters: { type: Object, default: () => ({}) } });
+const props = defineProps({ users: { type: Object, required: true }, filters: { type: Object, default: () => ({}) } });
 const money = (value) => value === null ? '-' : `${new Intl.NumberFormat('fr-FR').format(value || 0)} FCFA`;
+const filterIsActive = (status) => (props.filters.status || null) === status;
+const filterClass = (status) => filterIsActive(status)
+    ? 'border-tutor-gold bg-tutor-gold text-tutor-navy shadow-tutor'
+    : 'border-slate-200 bg-white text-tutor-navy hover:border-tutor-gold/70 hover:bg-tutor-gold/10';
 const patchWithConfirmation = (url, message) => {
     if (window.confirm(message)) {
         router.patch(url, {}, { preserveScroll: true });
@@ -17,18 +21,18 @@ const patchWithConfirmation = (url, message) => {
     <AuthenticatedLayout>
         <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div>
-                <h1 class="text-4xl font-bold">Gestion des tuteurs</h1>
+                <h1 class="text-3xl font-bold sm:text-4xl">Gestion des tuteurs</h1>
                 <p class="mt-2 text-slate-600">Validez, rejetez, suspendez ou réactivez les profils tuteurs.</p>
             </div>
             <div class="flex flex-wrap gap-2">
-                <Link :href="route('admin.tutors.index')" class="tl-button-secondary px-4 py-2 text-xs">Tous</Link>
-                <Link :href="route('admin.tutors.index', { status: 'en_attente' })" class="tl-button-secondary px-4 py-2 text-xs">En attente</Link>
-                <Link :href="route('admin.tutors.index', { status: 'actif' })" class="tl-button-secondary px-4 py-2 text-xs">Actifs</Link>
+                <Link :href="route('admin.tutors.index')" class="rounded-lg border px-4 py-2 text-xs font-bold transition" :class="filterClass(null)">Tous</Link>
+                <Link :href="route('admin.tutors.index', { status: 'en_attente' })" class="rounded-lg border px-4 py-2 text-xs font-bold transition" :class="filterClass('en_attente')">En attente</Link>
+                <Link :href="route('admin.tutors.index', { status: 'actif' })" class="rounded-lg border px-4 py-2 text-xs font-bold transition" :class="filterClass('actif')">Actifs</Link>
             </div>
         </div>
 
         <div v-if="users.data.length" class="mt-8 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-tutor">
-            <table class="min-w-[760px] text-left text-sm">
+            <table class="min-w-[820px] text-left text-sm">
                 <thead class="bg-slate-100 text-xs font-bold uppercase tracking-wide text-slate-500">
                     <tr>
                         <th class="px-5 py-4">Tuteur</th>

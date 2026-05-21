@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 class TutorModerationController extends Controller
 {
@@ -19,17 +20,23 @@ class TutorModerationController extends Controller
         $this->ensureAdmin($request);
         abort_unless($tutor->role === 'tuteur', 404);
 
-        $tutor->update(['status' => 'actif']);
+        try {
+            $tutor->update(['status' => 'actif']);
 
-        $conversation = $this->directConversation($request, $tutor);
+            $conversation = $this->directConversation($request, $tutor);
 
-        PlatformNotifier::send(
-            $tutor,
-            'Profil tuteur validé',
-            'Votre profil est maintenant visible publiquement sur TutorLink. L\'administration peut désormais vous contacter directement.',
-            route('messages.index', $conversation),
-            'success'
-        );
+            PlatformNotifier::send(
+                $tutor,
+                'Profil tuteur validé',
+                'Votre profil est maintenant visible publiquement sur TutorLink. L\'administration peut désormais vous contacter directement.',
+                route('messages.index', $conversation),
+                'success'
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->with('error', 'Impossible de valider ce profil tuteur pour le moment. Réessayez plus tard.');
+        }
 
         return back()->with('success', 'Tuteur validé et rendu visible publiquement.');
     }
@@ -39,15 +46,21 @@ class TutorModerationController extends Controller
         $this->ensureAdmin($request);
         abort_unless($tutor->role === 'tuteur', 404);
 
-        $tutor->update(['status' => 'rejete']);
+        try {
+            $tutor->update(['status' => 'rejete']);
 
-        PlatformNotifier::send(
-            $tutor,
-            'Candidature tuteur refusée',
-            'Votre candidature tuteur n’a pas été acceptée. Contactez l’administration pour plus de détails.',
-            route('dashboard'),
-            'danger'
-        );
+            PlatformNotifier::send(
+                $tutor,
+                'Candidature tuteur refusée',
+                'Votre candidature tuteur n’a pas été acceptée. Contactez l’administration pour plus de détails.',
+                route('dashboard'),
+                'danger'
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->with('error', 'Impossible de rejeter cette candidature pour le moment. Réessayez plus tard.');
+        }
 
         return back()->with('success', 'Candidature tuteur rejetée.');
     }
@@ -57,15 +70,21 @@ class TutorModerationController extends Controller
         $this->ensureAdmin($request);
         abort_unless($tutor->role === 'tuteur', 404);
 
-        $tutor->update(['status' => 'suspendu']);
+        try {
+            $tutor->update(['status' => 'suspendu']);
 
-        PlatformNotifier::send(
-            $tutor,
-            'Profil tuteur suspendu',
-            'Votre profil n’est plus visible publiquement. Contactez l’administration.',
-            route('dashboard'),
-            'danger'
-        );
+            PlatformNotifier::send(
+                $tutor,
+                'Profil tuteur suspendu',
+                'Votre profil n’est plus visible publiquement. Contactez l’administration.',
+                route('dashboard'),
+                'danger'
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->with('error', 'Impossible de suspendre ce tuteur pour le moment. Réessayez plus tard.');
+        }
 
         return back()->with('success', 'Tuteur suspendu.');
     }

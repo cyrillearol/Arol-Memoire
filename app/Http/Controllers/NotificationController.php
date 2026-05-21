@@ -14,6 +14,16 @@ class NotificationController extends Controller
 {
     public function index(Request $request): Response
     {
+        DB::table('notifications')
+            ->where('notifiable_type', User::class)
+            ->where('notifiable_id', $request->user()->id)
+            ->where('data', 'not like', '%"call"%')
+            ->whereNull('read_at')
+            ->update([
+                'read_at' => now(),
+                'updated_at' => now(),
+            ]);
+
         $notifications = DB::table('notifications')
             ->where('notifiable_type', User::class)
             ->where('notifiable_id', $request->user()->id)

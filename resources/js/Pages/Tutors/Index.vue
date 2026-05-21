@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import PublicFooter from '@/Components/PublicFooter.vue';
 import PublicHeader from '@/Components/PublicHeader.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
@@ -27,6 +27,9 @@ const search = () => {
 };
 
 const money = (value) => `${new Intl.NumberFormat('fr-FR').format(value || 0)} FCFA`;
+const subjectClass = (subject) => form.subject === subject
+    ? 'bg-tutor-gold text-tutor-navy ring-2 ring-tutor-gold/40'
+    : 'bg-white text-tutor-navy hover:bg-tutor-gold/80';
 </script>
 
 <template>
@@ -35,10 +38,10 @@ const money = (value) => `${new Intl.NumberFormat('fr-FR').format(value || 0)} F
     <main class="min-h-screen bg-tutor-surface">
         <PublicHeader active="tutors" />
 
-        <section class="mx-auto max-w-7xl px-5 py-12 sm:px-8">
+        <section class="mx-auto max-w-7xl px-4 py-10 sm:px-8 sm:py-12">
             <div class="grid gap-8 lg:grid-cols-[0.75fr_1.25fr] lg:items-end">
                 <div>
-                    <h1 class="text-5xl font-bold">Trouver un tuteur</h1>
+                    <h1 class="text-4xl font-bold sm:text-5xl">Trouver un tuteur</h1>
                     <p class="mt-4 text-lg leading-8 text-slate-600">Consultez uniquement les profils validés par l’administration.</p>
                 </div>
                 <form class="tl-card flex flex-col gap-3 p-4 sm:flex-row" @submit.prevent="search">
@@ -48,7 +51,7 @@ const money = (value) => `${new Intl.NumberFormat('fr-FR').format(value || 0)} F
             </div>
 
             <div v-if="subjects.length" class="mt-8 flex flex-wrap gap-2">
-                <Link v-for="subject in subjects" :key="subject" :href="route('tutors.index', { subject })" class="rounded-full bg-white px-4 py-2 text-sm font-bold text-tutor-navy shadow-tutor hover:bg-tutor-gold">{{ subject }}</Link>
+                <Link v-for="subject in subjects" :key="subject" :href="route('tutors.index', { subject })" class="rounded-full px-4 py-2 text-sm font-bold shadow-tutor transition" :class="subjectClass(subject)">{{ subject }}</Link>
             </div>
 
             <div v-if="tutors.data.length" class="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -56,8 +59,8 @@ const money = (value) => `${new Intl.NumberFormat('fr-FR').format(value || 0)} F
                     <div class="grid aspect-[4/2.4] place-items-center bg-[#e4edf3]">
                         <div class="grid size-24 place-items-center rounded-full bg-tutor-navy text-3xl font-bold text-white ring-8 ring-white/80">{{ tutor.name.charAt(0) }}</div>
                     </div>
-                    <div class="p-6">
-                        <div class="flex items-start justify-between gap-4">
+                    <div class="p-5 sm:p-6">
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div>
                                 <h2 class="text-2xl font-bold">{{ tutor.name }}</h2>
                                 <p class="text-sm font-bold uppercase tracking-wide text-slate-500">{{ tutor.domain }}</p>
@@ -68,7 +71,7 @@ const money = (value) => `${new Intl.NumberFormat('fr-FR').format(value || 0)} F
                         <div class="mt-5 flex flex-wrap gap-2">
                             <span v-for="subject in tutor.subjects.slice(0, 4)" :key="subject" class="rounded-full bg-[#d5e3ff] px-3 py-1 text-xs font-bold text-tutor-navy">{{ subject }}</span>
                         </div>
-                        <div class="mt-6 flex items-center justify-between border-t border-slate-200 pt-4">
+                        <div class="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
                             <span class="font-bold text-tutor-navy">{{ money(tutor.hourly_rate) }} / h</span>
                             <Link :href="route('tutors.show', tutor.id)" class="tl-button-secondary px-4 py-2 text-xs">Voir le profil</Link>
                         </div>

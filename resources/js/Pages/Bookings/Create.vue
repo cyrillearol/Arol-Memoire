@@ -320,8 +320,8 @@ onMounted(async () => {
     <main class="min-h-screen bg-tutor-surface">
         <PublicHeader active="tutors" />
 
-        <section class="mx-auto max-w-7xl px-5 py-10 sm:px-8">
-            <div class="mx-auto mb-12 grid max-w-3xl grid-cols-3 items-center gap-4 text-center text-sm text-slate-500">
+        <section class="mx-auto max-w-7xl px-4 py-8 sm:px-8 sm:py-10">
+            <div class="mx-auto mb-8 grid max-w-3xl grid-cols-[auto_1fr_auto] items-center gap-3 text-center text-xs text-slate-500 sm:mb-12 sm:grid-cols-3 sm:gap-4 sm:text-sm">
                 <div><span class="mx-auto grid size-10 place-items-center rounded-full bg-tutor-navy font-bold text-white">1</span><p class="mt-2 font-bold text-tutor-navy">Créneau</p></div>
                 <div class="h-px bg-slate-300"></div>
                 <div><span class="mx-auto grid size-10 place-items-center rounded-full bg-slate-200 font-bold text-slate-600">2</span><p class="mt-2">Paiement</p></div>
@@ -329,7 +329,7 @@ onMounted(async () => {
 
             <form class="grid gap-8 lg:grid-cols-[340px_1fr]" @submit.prevent="submit">
                 <aside class="space-y-5">
-                    <div class="tl-card p-8 text-center">
+                    <div class="tl-card p-5 text-center sm:p-8">
                         <div class="mx-auto grid size-28 place-items-center rounded-full bg-tutor-navy text-4xl font-bold text-white">{{ tutor.name.charAt(0) }}</div>
                         <h1 class="mt-5 text-2xl font-bold">{{ tutor.name }}</h1>
                         <p class="text-sm font-bold uppercase tracking-wide text-slate-500">{{ tutor.domain }}</p>
@@ -344,8 +344,8 @@ onMounted(async () => {
                 </aside>
 
                 <div class="space-y-8">
-                    <section class="tl-card p-7">
-                        <h2 class="text-3xl font-bold">Choisissez un créneau disponible</h2>
+                    <section class="tl-card p-5 sm:p-7">
+                        <h2 class="text-2xl font-bold sm:text-3xl">Choisissez un créneau disponible</h2>
                         <div class="mt-6 grid gap-5 md:grid-cols-2">
                             <div>
                                 <label class="text-sm font-bold text-tutor-ink">Matière</label>
@@ -381,13 +381,13 @@ onMounted(async () => {
                         </div>
                     </section>
 
-                    <section class="tl-card p-7">
-                        <h2 class="text-3xl font-bold">Résumé de la réservation</h2>
+                    <section class="tl-card p-5 sm:p-7">
+                        <h2 class="text-2xl font-bold sm:text-3xl">Résumé de la réservation</h2>
                         <div class="mt-6 grid gap-5 md:grid-cols-2">
                             <div class="space-y-3 text-sm">
-                                <div class="flex justify-between border-b border-slate-200 pb-3"><span class="text-slate-500">Date</span><span class="font-bold">{{ selectedSlot?.date_label || '-' }}</span></div>
-                                <div class="flex justify-between border-b border-slate-200 pb-3"><span class="text-slate-500">Heure</span><span class="font-bold">{{ selectedSlot?.time || '-' }}</span></div>
-                                <div class="flex justify-between border-b border-slate-200 pb-3"><span class="text-slate-500">Durée</span><span class="font-bold">{{ form.duration_minutes }} min</span></div>
+                                <div class="flex justify-between gap-4 border-b border-slate-200 pb-3"><span class="text-slate-500">Date</span><span class="font-bold">{{ selectedSlot?.date_label || '-' }}</span></div>
+                                <div class="flex justify-between gap-4 border-b border-slate-200 pb-3"><span class="text-slate-500">Heure</span><span class="font-bold">{{ selectedSlot?.time || '-' }}</span></div>
+                                <div class="flex justify-between gap-4 border-b border-slate-200 pb-3"><span class="text-slate-500">Durée</span><span class="font-bold">{{ form.duration_minutes }} min</span></div>
                             </div>
                             <div>
                                 <label class="text-sm font-bold uppercase tracking-wide text-slate-500">Besoins pour la séance</label>
@@ -401,8 +401,8 @@ onMounted(async () => {
                     </section>
 
                     <section class="grid gap-6 lg:grid-cols-[1fr_300px]">
-                        <div class="tl-card p-7">
-                            <h2 class="text-3xl font-bold">Paiement Kkiapay</h2>
+                        <div class="tl-card p-5 sm:p-7">
+                            <h2 class="text-2xl font-bold sm:text-3xl">Paiement Kkiapay</h2>
                             <div class="mt-6 rounded-lg border border-slate-200 bg-tutor-surface p-5">
                                 <p class="font-bold text-tutor-navy">Mobile Money et carte bancaire</p>
                                 <p class="mt-2 text-sm text-slate-600">Le paiement est vérifié avant l’envoi de la demande au tuteur.</p>
@@ -416,8 +416,8 @@ onMounted(async () => {
                         <div class="tl-card h-fit p-7">
                             <h3 class="font-bold text-tutor-navy">Récapitulatif</h3>
                             <div class="mt-5 space-y-3 text-sm">
-                                <div class="flex justify-between"><span>Cours</span><span class="font-bold">{{ money(amount) }}</span></div>
-                                <div class="flex justify-between"><span>Frais de service</span><span class="font-bold">{{ money(fees) }}</span></div>
+                                <div class="flex justify-between gap-4"><span>Cours</span><span class="font-bold">{{ money(amount) }}</span></div>
+                                <div class="flex justify-between gap-4"><span>Frais de service</span><span class="font-bold">{{ money(fees) }}</span></div>
                                 <div class="flex justify-between border-t border-slate-200 pt-3 text-lg font-bold text-tutor-navy"><span>Total</span><span>{{ money(total) }}</span></div>
                             </div>
                             <button type="button" class="tl-button-primary mt-6 w-full" :disabled="form.processing || !form.scheduled_at || !hasValidPaymentAmount || Boolean(paymentStatus)" @click="startKkiapayPayment">

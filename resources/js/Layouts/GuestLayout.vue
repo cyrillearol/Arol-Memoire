@@ -25,16 +25,16 @@ const tutorSessionImage = '/images/tutor-online-session.jpg';
             <p class="relative z-10 text-xs text-slate-400">© 2026 TutorLink. Excellence académique et réussite professionnelle.</p>
         </section>
 
-        <section class="flex min-h-screen justify-center overflow-y-auto px-5 sm:px-8 lg:h-screen">
-            <div class="my-auto w-full max-w-[520px] py-10">
-                <div class="mb-8 flex items-center justify-between lg:hidden">
+        <section class="flex min-h-screen justify-center overflow-y-auto px-4 sm:px-8 lg:h-screen">
+            <div class="my-auto w-full max-w-[520px] py-6 sm:py-10">
+                <div class="mb-6 flex items-center justify-between gap-4 lg:hidden">
                     <Link :href="route('home')" class="text-2xl font-bold text-tutor-navy">
                         <span class="font-display">Tutor</span><span class="font-display text-[#9a6200]">Link</span>
                     </Link>
                     <Link :href="route('home')" class="tl-button-secondary px-4 py-2">Accueil</Link>
                 </div>
 
-                <div class="tl-card p-7 sm:p-10">
+                <div class="tl-card p-5 sm:p-10">
                     <slot />
                 </div>
             </div>

@@ -30,7 +30,7 @@ const submit = () => {
         <Head title="Connexion" />
 
         <div class="text-center">
-            <h1 class="text-4xl font-bold">Bon retour parmi nous</h1>
+            <h1 class="text-3xl font-bold sm:text-4xl">Bon retour parmi nous</h1>
             <p class="mt-3 text-base leading-6 text-slate-600">Connectez-vous pour accéder à votre espace personnel.</p>
         </div>
 
@@ -48,7 +48,7 @@ const submit = () => {
             </div>
 
             <div class="mt-5">
-                <div class="flex items-center justify-between">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <InputLabel for="password" value="Mot de passe" />
                     <Link v-if="canResetPassword" :href="route('password.request')" class="text-xs font-semibold text-[#9a6200] hover:text-tutor-navy">Mot de passe oublié?</Link>
                 </div>

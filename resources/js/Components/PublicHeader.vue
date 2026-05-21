@@ -1,9 +1,9 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
 import { Menu, X } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
-defineProps({
+const props = defineProps({
     active: {
         type: String,
         default: 'home',
@@ -11,6 +11,7 @@ defineProps({
 });
 
 const mobileOpen = ref(false);
+const currentActive = ref(props.active);
 
 const nav = [
     { id: 'home', label: 'Accueil', href: 'home' },
@@ -18,6 +19,35 @@ const nav = [
     { id: 'how', label: 'Comment ça marche', anchor: '/#fonctionnement' },
     { id: 'pricing', label: 'Tarifs', anchor: '/#tarifs' },
 ];
+
+const activeFromHash = () => {
+    if (typeof window === 'undefined') return null;
+
+    return {
+        '#fonctionnement': 'how',
+        '#tarifs': 'pricing',
+    }[window.location.hash] || null;
+};
+
+const syncActiveFromLocation = () => {
+    currentActive.value = activeFromHash() || props.active;
+};
+
+const activateItem = (item) => {
+    currentActive.value = item.id;
+    mobileOpen.value = false;
+};
+
+watch(() => props.active, syncActiveFromLocation);
+
+onMounted(() => {
+    syncActiveFromLocation();
+    window.addEventListener('hashchange', syncActiveFromLocation);
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener('hashchange', syncActiveFromLocation);
+});
 </script>
 
 <template>
@@ -34,13 +64,14 @@ const nav = [
                     :key="item.id"
                     :href="item.anchor || route(item.href)"
                     class="border-b-2 py-6 transition hover:text-tutor-navy"
-                    :class="active === item.id ? 'border-tutor-gold text-tutor-navy' : 'border-transparent'"
+                    :class="currentActive === item.id ? 'border-tutor-gold text-tutor-navy' : 'border-transparent'"
+                    @click="activateItem(item)"
                 >
                     {{ item.label }}
                 </component>
             </nav>
 
-            <div class="hidden items-center gap-3 text-sm font-bold sm:flex">
+            <div class="hidden items-center gap-3 text-sm font-bold md:flex">
                 <Link v-if="$page.props.auth.user" :href="route('dashboard')" class="tl-button-secondary px-4 py-2">Tableau de bord</Link>
                 <template v-else>
                     <Link :href="route('login')" class="rounded-lg px-4 py-2 text-tutor-navy transition hover:bg-slate-100">Connexion</Link>
@@ -48,13 +79,13 @@ const nav = [
                 </template>
             </div>
 
-            <button type="button" class="grid size-10 place-items-center rounded-lg border border-slate-200 text-tutor-navy sm:hidden" @click="mobileOpen = !mobileOpen">
+            <button type="button" class="grid size-10 place-items-center rounded-lg border border-slate-200 text-tutor-navy md:hidden" @click="mobileOpen = !mobileOpen">
                 <X v-if="mobileOpen" class="size-5" />
                 <Menu v-else class="size-5" />
             </button>
         </div>
 
-        <div v-if="mobileOpen" class="border-t border-slate-200 bg-white px-5 py-4 shadow-tutor sm:hidden">
+        <div v-if="mobileOpen" class="border-t border-slate-200 bg-white px-5 py-4 shadow-tutor md:hidden">
             <nav class="grid gap-2">
                 <component
                     :is="item.anchor ? 'a' : Link"
@@ -62,8 +93,8 @@ const nav = [
                     :key="item.id"
                     :href="item.anchor || route(item.href)"
                     class="rounded-lg border px-4 py-3 text-sm font-bold"
-                    :class="active === item.id ? 'border-tutor-gold bg-tutor-gold text-tutor-navy' : 'border-slate-200 text-slate-700'"
-                    @click="mobileOpen = false"
+                    :class="currentActive === item.id ? 'border-tutor-gold bg-tutor-gold text-tutor-navy' : 'border-slate-200 text-slate-700'"
+                    @click="activateItem(item)"
                 >
                     {{ item.label }}
                 </component>

@@ -26,6 +26,7 @@ const user = computed(() => page.props.auth.user);
 const isAdmin = computed(() => user.value?.role === 'admin');
 const notifications = computed(() => page.props.notifications || { unread_count: 0, recent: [] });
 const liveUnreadCount = ref(0);
+const pendingRouteName = ref(null);
 const mobileMenuOpen = ref(false);
 const reportModalOpen = ref(false);
 const liveNotice = ref(null);
@@ -66,6 +67,17 @@ watch(
         liveUnreadCount.value = Number(value.unread_count || 0);
     },
     { immediate: true },
+);
+
+watch(
+    () => page.url,
+    () => {
+        pendingRouteName.value = null;
+
+        if (route().current('notifications.index')) {
+            liveUnreadCount.value = 0;
+        }
+    },
 );
 
 const showLiveNotice = (notification) => {
@@ -554,7 +566,20 @@ const navItems = computed(() => {
 
 const initials = computed(() => (user.value?.name || 'U').split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase());
 
-const isNavActive = (item) => (item.activeRoutes || [item.routeName]).some((routeName) => route().current(routeName));
+const isNavActive = (item) => {
+    const activeRoutes = item.activeRoutes || [item.routeName];
+
+    if (pendingRouteName.value) {
+        return activeRoutes.includes(pendingRouteName.value);
+    }
+
+    return activeRoutes.some((routeName) => route().current(routeName));
+};
+
+const activateNavItem = (item) => {
+    pendingRouteName.value = item.routeName;
+    mobileMenuOpen.value = false;
+};
 
 const closeReportModal = () => {
     reportModalOpen.value = false;
@@ -614,6 +639,7 @@ const openReportModal = () => {
                     :class="isNavActive(item)
                         ? 'bg-tutor-gold text-tutor-navy shadow-tutor'
                         : (isAdmin ? 'text-white/70 hover:bg-white/10 hover:text-white' : 'text-slate-700 hover:bg-tutor-gold/15 hover:text-tutor-navy')"
+                    @click="activateNavItem(item)"
                 >
                     <span class="relative grid size-5 place-items-center">
                         <component :is="iconMap[item.icon]" class="size-5" />
@@ -677,7 +703,7 @@ const openReportModal = () => {
                             :href="route(item.routeName)"
                             class="flex items-center gap-3 rounded-lg border px-3 py-3 text-sm font-bold transition"
                             :class="isNavActive(item) ? 'border-tutor-gold bg-tutor-gold text-tutor-navy' : 'border-slate-200 bg-white text-tutor-navy'"
-                            @click="mobileMenuOpen = false"
+                            @click="activateNavItem(item)"
                         >
                             <span class="relative grid size-5 place-items-center">
                                 <component :is="iconMap[item.icon]" class="size-5" />
@@ -704,7 +730,7 @@ const openReportModal = () => {
                         <p class="font-bold">{{ liveNotice.title }}</p>
                         <p class="mt-1">{{ liveNotice.body }}</p>
                     </div>
-                    <Link v-if="liveNotice.url" :href="liveNotice.url" class="shrink-0 rounded-md bg-tutor-navy px-3 py-2 text-xs font-bold text-white">Ouvrir</Link>
+                    <Link v-if="liveNotice.url" :href="liveNotice.url" class="shrink-0 rounded-md bg-tutor-navy px-3 py-2 text-xs font-bold text-white" @click="liveNotice = null">Ouvrir</Link>
                 </div>
                 <div v-if="$page.props.flash?.success" class="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
                     {{ $page.props.flash.success }}

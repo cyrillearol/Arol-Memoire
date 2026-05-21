@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import PublicFooter from '@/Components/PublicFooter.vue';
 import PublicHeader from '@/Components/PublicHeader.vue';
 import { Head, Link } from '@inertiajs/vue3';
@@ -61,7 +61,7 @@ const tutorSessionImage = '/images/tutor-online-session.jpg';
 
         <section class="mx-auto grid max-w-7xl gap-12 px-5 py-16 sm:px-8 lg:grid-cols-[1fr_0.95fr] lg:items-center lg:py-20">
             <div>
-                <h1 class="max-w-2xl text-5xl font-bold leading-tight sm:text-6xl">L’excellence académique à portée de main</h1>
+                <h1 class="max-w-2xl text-4xl font-bold leading-tight sm:text-5xl lg:text-6xl">L’excellence académique à portée de main</h1>
                 <p class="mt-6 max-w-xl text-lg leading-8 text-slate-600">
                     Connectez-vous à des tuteurs qualifiés, réservez vos séances en ligne et suivez vos échanges dans un espace moderne et sécurisé.
                 </p>
@@ -164,7 +164,7 @@ const tutorSessionImage = '/images/tutor-online-session.jpg';
                         <p class="text-xs font-bold uppercase tracking-wide text-tutor-gold">Services</p>
                         <h2 class="mt-4 text-4xl font-bold text-white">Une plateforme complète pour le tutorat en ligne.</h2>
                         <div class="mt-8 grid gap-3">
-                            <button v-for="tab in tabs" :key="tab.id" type="button" class="rounded-lg px-4 py-3 text-left text-sm font-bold transition" :class="activeTab === tab.id ? 'bg-tutor-gold text-tutor-navy' : 'bg-white/8 text-white/70 hover:bg-white/14 hover:text-white'" @click="activeTab = tab.id">
+                            <button v-for="tab in tabs" :key="tab.id" type="button" class="rounded-lg border px-4 py-3 text-left text-sm font-bold transition" :aria-pressed="activeTab === tab.id" :class="activeTab === tab.id ? 'border-tutor-gold bg-tutor-gold text-tutor-navy shadow-lg ring-2 ring-tutor-gold/40' : 'border-white/10 bg-white/8 text-white/70 hover:bg-white/14 hover:text-white'" @click="activeTab = tab.id">
                                 {{ tab.label }}
                             </button>
                         </div>
@@ -194,7 +194,7 @@ const tutorSessionImage = '/images/tutor-online-session.jpg';
         </section>
 
         <section id="tarifs" class="mx-auto max-w-7xl px-5 pb-20 sm:px-8">
-            <div class="rounded-2xl bg-tutor-navy p-10 text-center text-white md:p-14">
+            <div class="rounded-2xl bg-tutor-navy p-6 text-center text-white sm:p-10 md:p-14">
                 <h2 class="mx-auto max-w-2xl text-4xl font-bold text-white">Rejoignez un espace pensé pour apprendre sérieusement.</h2>
                 <p class="mx-auto mt-5 max-w-2xl text-white/65">Chaque tuteur définit son tarif horaire. Le paiement est associé à la réservation et suivi depuis votre tableau de bord.</p>
                 <Link :href="route('register')" class="tl-button-primary mt-8">S’inscrire maintenant</Link>

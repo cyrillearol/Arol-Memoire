@@ -50,12 +50,12 @@ const deleteAvailability = (availability) => {
 
     <AuthenticatedLayout>
         <div>
-            <h1 class="text-4xl font-bold">Disponibilités</h1>
+            <h1 class="text-3xl font-bold sm:text-4xl">Disponibilités</h1>
             <p class="mt-2 text-slate-600">Définissez les créneaux que les étudiants pourront réserver.</p>
         </div>
 
-        <div class="tl-card mt-8 p-6">
-            <form class="grid gap-4 md:grid-cols-[1fr_1fr_1fr_auto]" @submit.prevent="submit">
+        <div class="tl-card mt-8 p-5 sm:p-6">
+            <form class="grid gap-4 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_auto]" @submit.prevent="submit">
                 <select v-model="form.weekday" class="tl-input px-4 py-3" required>
                     <option v-for="(label, day) in weekdays" :key="day" :value="Number(day)">{{ label }}</option>
                 </select>
@@ -76,7 +76,7 @@ const deleteAvailability = (availability) => {
                     <select v-model="editForm.weekday" class="tl-input w-full px-4 py-3" required>
                         <option v-for="(label, day) in weekdays" :key="day" :value="Number(day)">{{ label }}</option>
                     </select>
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid gap-3 sm:grid-cols-2">
                         <input v-model="editForm.start_time" type="time" class="tl-input px-4 py-3" required />
                         <input v-model="editForm.end_time" type="time" class="tl-input px-4 py-3" required />
                     </div>
@@ -84,7 +84,7 @@ const deleteAvailability = (availability) => {
                         <input v-model="editForm.is_available" type="checkbox" class="rounded border-slate-300 text-[#9a6200] focus:ring-[#9a6200]" />
                         Créneau disponible
                     </label>
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid gap-2 sm:grid-cols-2">
                         <button type="button" class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600" @click="cancelEdit">Annuler</button>
                         <button class="tl-button-primary px-4 py-2 text-sm" :disabled="editForm.processing">Enregistrer</button>
                     </div>
@@ -94,7 +94,7 @@ const deleteAvailability = (availability) => {
                 </form>
 
                 <template v-else>
-                    <div class="flex items-start justify-between gap-3">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <p class="text-xl font-bold text-tutor-navy">{{ weekdays[availability.weekday] }}</p>
                             <p class="mt-2 text-slate-600">{{ availability.start_time }} - {{ availability.end_time }}</p>
