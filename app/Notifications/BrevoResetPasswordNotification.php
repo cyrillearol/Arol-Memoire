@@ -13,12 +13,12 @@ class BrevoResetPasswordNotification extends ResetPassword
 {
     public function via($notifiable): array
     {
-        return [config('services.brevo.key') ? 'brevo' : 'mail'];
+        return [$this->shouldUseBrevoApi() ? 'brevo' : 'mail'];
     }
 
     public function toBrevo($notifiable): void
     {
-        $apiKey = config('services.brevo.key');
+        $apiKey = $this->brevoApiKey();
 
         if (! $apiKey) {
             throw new RuntimeException('La cle API Brevo est absente.');
@@ -61,6 +61,26 @@ class BrevoResetPasswordNotification extends ResetPassword
             ->line('Si vous n\'etes pas a l\'origine de cette demande, ignorez simplement cet e-mail.');
     }
 
+    private function shouldUseBrevoApi(): bool
+    {
+        return $this->brevoApiKey() !== null;
+    }
+
+    private function brevoApiKey(): ?string
+    {
+        $raw = (string) config('services.brevo.key', '');
+        $key = trim(trim($raw), " \t\n\r\0\x0B\"'");
+
+        if ($key === '' || strtolower($key) === 'null') {
+            return null;
+        }
+
+        if (str_starts_with(strtolower($key), 'xsmtpsib-')) {
+            return null;
+        }
+
+        return $key;
+    }
     private function htmlContent(?string $name, string $resetUrl): string
     {
         $safeName = e($name ?: 'Utilisateur');

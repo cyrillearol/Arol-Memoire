@@ -150,6 +150,59 @@ const mediaErrorMessage = (error) => {
     return `Impossible d allumer le micro ou la camera${error?.name ? ` (${error.name})` : ''}.`;
 };
 
+const signalingErrorMessage = (error) => {
+    if (error?.message === 'INVALID_REMOTE_DESCRIPTION') {
+        return 'Les informations de l appel recues sont invalides. Relancez l appel.';
+    }
+
+    const status = Number(error?.response?.status || 0);
+
+    if (status === 403) {
+        return 'Appel non autorise pour cette conversation.';
+    }
+
+    if (status === 404) {
+        return 'Conversation introuvable. Rechargez la page.';
+    }
+
+    if (status === 419) {
+        return 'Session expiree. Rechargez la page puis reconnectez-vous.';
+    }
+
+    return 'Impossible de connecter l appel pour le moment. Verifiez la connexion puis reessayez.';
+};
+
+const shouldUseMediaError = (error) => {
+    if (error?.message === 'WEBRTC_UNAVAILABLE') return true;
+
+    return [
+        'NotAllowedError',
+        'PermissionDeniedError',
+        'NotFoundError',
+        'DevicesNotFoundError',
+        'NotReadableError',
+        'TrackStartError',
+        'OperationError',
+        'AbortError',
+    ].includes(error?.name);
+};
+
+const callErrorMessage = (error) => (shouldUseMediaError(error) ? mediaErrorMessage(error) : signalingErrorMessage(error));
+
+const asSessionDescriptionPayload = (description) => {
+    if (!description || typeof description !== 'object') {
+        return null;
+    }
+
+    const type = description.type;
+    const sdp = description.sdp;
+
+    if (typeof type !== 'string' || typeof sdp !== 'string' || !type || !sdp) {
+        return null;
+    }
+
+    return { type, sdp };
+};
 const requestGlobalLocalStream = async (mode) => {
     if (!window.RTCPeerConnection || !window.isSecureContext) {
         throw new Error('WEBRTC_UNAVAILABLE');
@@ -404,18 +457,30 @@ const acceptIncomingCall = async () => {
         const connection = createGlobalPeerConnection();
         globalLocalStream?.getTracks().forEach((track) => connection.addTrack(track, globalLocalStream));
 
-        await connection.setRemoteDescription(new RTCSessionDescription(incomingCall.value.payload.description));
+        const remoteDescription = asSessionDescriptionPayload(incomingCall.value.payload.description);
+
+        if (!remoteDescription) {
+            throw new Error('INVALID_REMOTE_DESCRIPTION');
+        }
+
+        await connection.setRemoteDescription(remoteDescription);
         await flushGlobalCandidates();
 
         const answer = await connection.createAnswer();
         await connection.setLocalDescription(answer);
 
-        await sendGlobalCallSignal('call-answer', { description: connection.localDescription });
+        const localDescription = asSessionDescriptionPayload(connection.localDescription);
+
+        if (!localDescription) {
+            throw new Error('INVALID_REMOTE_DESCRIPTION');
+        }
+
+        await sendGlobalCallSignal('call-answer', { description: localDescription });
 
         globalCallState.value = 'active';
         globalCallStatus.value = 'Appel en cours';
     } catch (error) {
-        globalCallError.value = mediaErrorMessage(error);
+        globalCallError.value = callErrorMessage(error);
         globalCallState.value = 'incoming';
         incomingCallJoining.value = false;
     }
