@@ -182,8 +182,6 @@ const shouldUseMediaError = (error) => {
         'DevicesNotFoundError',
         'NotReadableError',
         'TrackStartError',
-        'OperationError',
-        'AbortError',
     ].includes(error?.name);
 };
 
